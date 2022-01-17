@@ -1,4 +1,11 @@
-# pycharm directory ?
+### Video interviews analysis ###
+
+*.wav
+video/
+splits/
+audio/
+
+# pycharm directory
 .idea/
 
 # Byte-compiled / optimized / DLL files
