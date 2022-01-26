@@ -1,10 +1,14 @@
 import pydub
 import os
 
-def load_audios(video_folder) :
-    filenames = os.listdir(video_folder)
-    audio = list(map(lambda f : pydub.AudioSegment.from_file(video_folder+f,'mp4'),filenames))
+def split_questions(video_folder,df_startend,filename):
+    df_startend = df_startend[df_startend['mail']==filename.split('.mp4',2)[0]]
+    #Read audio
+    audio = pydub.AudioSegment.from_file(video_folder+filename,'mp4')
+    #split audio
+    audios = [audio[s:e] for (s,e) in zip(df_startend['start'],df_startend['end'])]
     return audios
+
 
 def split_pauses(audio=None,filename=None,save=False) :
     if not audio and not filename :
@@ -16,7 +20,6 @@ def split_pauses(audio=None,filename=None,save=False) :
     audio_chunks = pydub.silence.split_on_silence(audio, 
         # must be silent for at least 1.5 second
         min_silence_len=1500,
-
         # consider it silent if quieter than -16 dBFS
         silence_thresh=-50
     )
