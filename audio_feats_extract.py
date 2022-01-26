@@ -1,3 +1,4 @@
+from audio_utils import pydub2librosa
 import pydub
 import librosa
 import numpy as np
@@ -16,8 +17,8 @@ def pauses_features(audio) :
         return len(durations), np.min(durations), np.max(durations), np.mean(durations), speak_duration
 
 
-def spectral_features(filename):
-    y , sr = librosa.load('audios/'+filename+'.wav', sr=None) #time series x , and sr is a sampling rate of x
+def spectral_features(audio):
+    y, sr = pydub2librosa(audio)
     
     rmse = librosa.feature.rms(y=y)
     # Spectral centroid
