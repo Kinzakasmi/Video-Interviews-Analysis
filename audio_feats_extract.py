@@ -18,6 +18,14 @@ def pauses_features(audio) :
 
 
 def spectral_features(audio):
+    '''Extracts spectral features from an audio, ie the means of the following :
+    - Spectral centroid,
+    - Spectral bandwidth,
+    - Spectral rolloff,
+    - Zero crossing rate,
+    - Mel-Frequency Cepstral Coefficients(MFCCs),
+    - Chroma features
+    '''
     y, sr = pydub2librosa(audio)
     
     rmse = librosa.feature.rms(y=y)
