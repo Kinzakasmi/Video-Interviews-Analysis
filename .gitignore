@@ -1,10 +1,11 @@
 ### Video interviews analysis ###
 
 *.wav
-video/
-splits/
-audio/
+.video/
+.splits/
+.audio/
 
+*.mp4
 *.csv
 *.xlsx
 
