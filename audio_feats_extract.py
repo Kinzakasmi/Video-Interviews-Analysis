@@ -5,16 +5,22 @@ import numpy as np
 
 def pauses_features(audio) :    
     '''Returns min, max and mean of pauses and speak duration all in seconds'''
-    # must be silent for at least 1.5 second
+    # must be silent for at least 2 second
     # consider it silent if quieter than -40 dBFS
-    silence = pydub.silence.detect_silence(audio, min_silence_len=1500, silence_thresh=-40, seek_step=10)
+    silence   = pydub.silence.detect_silence(audio, min_silence_len=2000, silence_thresh=-40, seek_step=20)
     durations = [round((e-s)/1000) for (s,e) in silence]
 
-    speak_duration = round(len(audio)/1000)-np.sum(durations)
+    interview_duration = round(len(audio)/1000)
+
     if len(durations) == 0 :
-        return None
+        return 0,0,0,0,interview_duration
     else :
-        return len(durations), np.min(durations), np.max(durations), np.mean(durations), speak_duration
+        speak_duration = interview_duration-np.sum(durations)
+        durations      = [round(d/interview_duration,6) for d in durations] #normalization
+        nb_long_pauses = round(len(durations)/interview_duration,6)
+        mean_pauses    =  np.mean(durations)
+        max_pauses     = np.max(durations)
+        return nb_long_pauses, mean_pauses, max_pauses, speak_duration
 
 
 def spectral_features(audio):
