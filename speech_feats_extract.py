@@ -114,9 +114,16 @@ class LexicalFeatures:
     ### Set variables related to sentences
     def set_sentences(self):
         '''
-            Split speech as sentences using . ! ? ... as delimiter in a private variable
+            Split speech as sentences using . ! ? ... as delimiter between sentences and set it in a private variable
         '''
-        sentences = [sent.split('?') for sent in self._speech.split('!')]
+
+        #Removing punctuation from the speech to split sentences
+        speech = self._speech
+        for ponc in punctuation:
+            if ponc not in ['.', '!', '?']:
+                speech = speech.replace(ponc, '')
+
+        sentences = [sent.split('?') for sent in speech.split('!')]
         sentences = [sent.split('...') for sent in sentences]
 
         self._sentences = [sent.split('.') for sent in sentences]
