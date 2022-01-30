@@ -4,6 +4,12 @@
 .video/
 .splits/
 .audio/
+.video/*
+.splits/*
+.audio/*
+video/
+splits/
+audio/
 
 *.mp4
 *.csv
