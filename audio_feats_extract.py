@@ -69,7 +69,7 @@ def split_non_silent(audio, nonsilent_ranges,keep_silence=1000):
         last_end = range_i[1]
         next_start = range_ii[0]
         if next_start < last_end:
-            range_i[1] = (last_end+next_start)//2
+            range_i[1]  = (last_end+next_start)//2
             range_ii[0] = range_i[1]
 
     audios = [audio[ max(start,0) : min(end,len(audio)) ] for start,end in output_ranges]
@@ -92,17 +92,17 @@ def spectral_features(audio,n_fft, hop_length):
     - Chroma features"""
     y, sr = pydub2librosa(audio)
     
-    rmse = librosa.feature.rms(y=y, hop_length=hop_length)
+    rmse        = librosa.feature.rms(y=y, hop_length=hop_length)
     # Spectral centroid
-    spec_cent = librosa.feature.spectral_centroid(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
+    spec_cent   = librosa.feature.spectral_centroid(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
     # Spectral bandwidth
-    spec_bw = librosa.feature.spectral_bandwidth(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
+    spec_bw     = librosa.feature.spectral_bandwidth(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
     # Spectral rolloff
-    rolloff = librosa.feature.spectral_rolloff(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
+    rolloff     = librosa.feature.spectral_rolloff(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
     # Zero crossing rate
-    zcr = librosa.feature.zero_crossing_rate(y)
+    zcr         = librosa.feature.zero_crossing_rate(y)
     # Mel-Frequency Cepstral Coefficients(MFCCs)
-    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
+    mfcc        = librosa.feature.mfcc(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
     # Chroma features
     chroma_stft = librosa.feature.chroma_stft(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
 
@@ -113,13 +113,14 @@ def spectral_features(audio,n_fft, hop_length):
     for e in mfcc:
         features.append(e)    
 
+    # Formatting the DataFrame
     feature_names = ['rms','spec_cent','specbw','rolloff','zcr']+['chroma_stft'+str(i) for i in range(12)]+['mfcc'+str(i) for i in range(20)]
 
-    df_features = pd.DataFrame(features,index=feature_names)
-    df_features = df_features.transpose()
-
-    df_features = df_features.apply(lambda x : [np.mean(x),np.std(x),np.min(x),np.max(x)],axis=0)
+    df_features       = pd.DataFrame(features,index=feature_names)
+    df_features       = df_features.transpose()
+    df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
+    
     return df_features
 
 # ---- Prosodic features ----
@@ -130,58 +131,55 @@ def f0_features(y,sr):
     """
     f0, _, voiced_prob = librosa.pyin(y, sr=sr, frame_length=2048*8,
                             fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'))
-    df_features = pd.DataFrame([f0,voiced_prob],index=['f0','voiced_pb'])
-    df_features = df_features.transpose()
-
-    df_features = df_features.apply(lambda x : [np.mean(x),np.std(x),np.min(x),np.max(x)],axis=0)
+    
+    # Formatting the DataFrame
+    df_features       = pd.DataFrame([f0,voiced_prob],index=['f0','voiced_pb'])
+    df_features       = df_features.transpose()
+    df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
+    
     return df_features
 
 def tempo_features(y,sr,hop_length):
     """Returns the estimated tempo (beats per minute)"""
-    oenv = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length)
+    oenv  = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length)
     tempo = librosa.beat.tempo(onset_envelope=oenv, sr=sr, hop_length=hop_length,aggregate=None)
 
-    df_features = pd.DataFrame(tempo,columns=['tempo'])
-
-    df_features = df_features.apply(lambda x : [np.mean(x),np.std(x),np.min(x),np.max(x)],axis=0)
+    # Formatting the DataFrame
+    df_features       = pd.DataFrame(tempo,columns=['tempo'])
+    df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
+    
     return df_features
 
 def loudness_features(y,sr,n_fft,hop_length):
     """The definition of loudness is very complex. This is just a try at finding loudness.
     Returns the mean, std, min and max of loudness"""    
     #Compute fft
-    S = librosa.stft(y, n_fft=n_fft, hop_length=hop_length)
+    S     = librosa.stft(y, n_fft=n_fft, hop_length=hop_length)
     # Compute power.
     power = np.abs(S)**2
     
     frequencies = librosa.fft_frequencies(sr=sr, n_fft=n_fft)
     a_weighting = librosa.A_weighting(frequencies)
-    weighting = 10**(a_weighting/10)
-    power = power.T * weighting
+    weighting   = 10**(a_weighting/10)
+    power       = power.T * weighting
 
-    power = np.mean(power, axis=-1)
+    power    = np.mean(power, axis=-1)
     loudness = np.log(power*100 + 1)
 
-    df_features = pd.DataFrame([loudness,power],index=['loudness','psd'])
-    df_features = df_features.transpose()
-
-    df_features = df_features.apply(lambda x : [np.mean(x),np.std(x),np.min(x),np.max(x)],axis=0)
+    # Formatting the DataFrame
+    df_features       = pd.DataFrame([loudness,power],index=['loudness','psd'])
+    df_features       = df_features.transpose()
+    df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
+    
     return df_features
 
-def get_formants(audio):
+def get_formants(sound,f0min,f0max):
     """Extracts formants (frequency peaks in the spectrum which have a high degree of energy).
     This functions uses Praat software. I will look into implementing this myself."""
 
-    #No other option that exporting in .wav temporarily
-    audio.export('test.wav')
-    tempfile = os.getcwd()+"/test.wav"
-    sound = parselmouth.Sound(tempfile) 
-
-    f0min=75
-    f0max=300
     pointProcess = praat.call(sound, "To PointProcess (periodic, cc)", f0min, f0max)
     formants = praat.call(sound, "To Formant (burg)", 0.0025, 5, 5000, 0.025, 50)
 
@@ -191,7 +189,7 @@ def get_formants(audio):
     f3_list = []
     for point in range(0, numPoints):
         point += 1
-        t = praat.call(pointProcess, "Get time from index", point)
+        t  = praat.call(pointProcess, "Get time from index", point)
         f1 = praat.call(formants, "Get value at time", 1, t, 'Hertz', 'Linear')
         f2 = praat.call(formants, "Get value at time", 2, t, 'Hertz', 'Linear')
         f3 = praat.call(formants, "Get value at time", 3, t, 'Hertz', 'Linear')
@@ -199,17 +197,35 @@ def get_formants(audio):
         f2_list.append(f2)
         f3_list.append(f3)
 
-    df_features = pd.DataFrame([f1_list,f2_list,f3_list],index=['f1','f2','f3'])
-    df_features = df_features.transpose()
-
-    df_features = df_features.apply(lambda x : [np.mean(x),np.std(x),np.min(x),np.max(x)],axis=0)
+    # Formatting the DataFrame
+    df_features       = pd.DataFrame([f1_list,f2_list,f3_list],index=['f1','f2','f3'])
+    df_features       = df_features.transpose()
+    df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
-    
-    os.remove(tempfile)
     return df_features
+
+def source_acoustics(sound, f0min, f0max):
+    """Measures HNR, Jitter, and Shimmer"""
+    harmonicity         = praat.call(sound, "To Harmonicity (cc)", 0.01, f0min, 0.1, 1.0)
+    hnr                 = praat.call(harmonicity, "Get mean", 0, 0)
+    pointProcess        = praat.call(sound, "To PointProcess (periodic, cc)", f0min, f0max)
+    localJitter         = praat.call(pointProcess, "Get jitter (local)", 0, 0, 0.0001, 0.02, 1.3)
+    localabsoluteJitter = praat.call(pointProcess, "Get jitter (local, absolute)", 0, 0, 0.0001, 0.02, 1.3)
+    rapJitter           = praat.call(pointProcess, "Get jitter (rap)", 0, 0, 0.0001, 0.02, 1.3)
+    ppq5Jitter          = praat.call(pointProcess, "Get jitter (ppq5)", 0, 0, 0.0001, 0.02, 1.3)
+    ddpJitter           = praat.call(pointProcess, "Get jitter (ddp)", 0, 0, 0.0001, 0.02, 1.3)
+    localShimmer        = praat.call([sound, pointProcess], "Get shimmer (local)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    localdbShimmer      = praat.call([sound, pointProcess], "Get shimmer (local_dB)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    apq3Shimmer         = praat.call([sound, pointProcess], "Get shimmer (apq3)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    aqpq5Shimmer        = praat.call([sound, pointProcess], "Get shimmer (apq5)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    apq11Shimmer        = praat.call([sound, pointProcess], "Get shimmer (apq11)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+    ddaShimmer          = praat.call([sound, pointProcess], "Get shimmer (dda)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
+
+    return (hnr, localJitter, localabsoluteJitter, rapJitter, ppq5Jitter, ddpJitter, localShimmer, localdbShimmer, 
+            apq3Shimmer, aqpq5Shimmer, apq11Shimmer, ddaShimmer)
     
 
-def prosodic_features(audio,n_fft=2048,hop_length=512):
+def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     """Extracts prosodic features. They capture the intonation of speech, the rhythm or the tone of speech. 
     They reveal the information about the identity, attitude and emotional state of the underlying signal.
     """
@@ -220,25 +236,34 @@ def prosodic_features(audio,n_fft=2048,hop_length=512):
     tempo_feats = tempo_features(y,sr,hop_length)
     #loudness
     loudness_feats = loudness_features(y,sr,n_fft,hop_length)
-    #formants
-    formants_feats = get_formants(audio)
+    
+    #formants 
+    audio.export('test.wav') #No other option that exporting in .wav temporarily
+    tempfile = os.getcwd()+"/test.wav"
+    sound = parselmouth.Sound(tempfile) 
+    formants_feats = get_formants(sound,f0min,f0max)
+    acoustic_feats = source_acoustics(sound, f0min, f0max)
+    os.remove(tempfile)
 
-    return pd.concat([f0_feats, tempo_feats, loudness_feats, formants_feats], axis=1, join="inner")
+    return pd.concat([f0_feats, tempo_feats, loudness_feats, formants_feats], axis=1, join="inner"),acoustic_feats
 
 class Audio :
     def __init__(self,audio,min_silence_len=2000,silence_thresh=-40,keep_silence=1000,n_fft=2048,hop_length=512):
         self.audio = audio
         self.length = round(len(self.audio)/1000)
-        self.silent_ranges = []
-        self.pauses_features = []
-        self.nonsilent_ranges = []
+       
+        self.silent_ranges     = []
+        self.pauses_features   = []
+        self.nonsilent_ranges  = []
         self.spectral_features = []
         self.prosodic_features = []
+        self.acoustic_features = []
+
         self.min_silence_len = min_silence_len
-        self.silence_thresh = silence_thresh
-        self.keep_silence = keep_silence
-        self.n_fft = n_fft
-        self.hop_length = hop_length
+        self.silence_thresh  = silence_thresh
+        self.keep_silence    = keep_silence
+        self.n_fft           = n_fft
+        self.hop_length      = hop_length
 
     def preprocessing(self):
         # Detecting silent parts
@@ -259,4 +284,4 @@ class Audio :
         self.spectral_features = spectral_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
 
         # Calculating prosodic_features
-        self.prosodic_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
+        self.prosodic_features, self.acoustic_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
