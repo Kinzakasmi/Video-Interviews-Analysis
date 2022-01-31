@@ -246,6 +246,7 @@ class Audio :
 
     def preprocessing(self):
         # Detecting silent parts
+        print("Extracting pause-related features")
         self.silent_ranges = pydub.silence.detect_silence(self.audio, 
                                                         min_silence_len=self.min_silence_len, 
                                                         silence_thresh=self.silence_thresh, 
