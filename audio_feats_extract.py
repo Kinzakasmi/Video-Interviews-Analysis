@@ -237,7 +237,6 @@ class Audio :
         self.nonsilent_ranges  = []
         self.spectral_features = []
         self.prosodic_features = []
-        self.acoustic_features = []
 
         self.min_silence_len = min_silence_len
         self.silence_thresh  = silence_thresh
@@ -264,13 +263,12 @@ class Audio :
         self.spectral_features = spectral_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
 
         # Calculating prosodic_features
-        self.prosodic_features, self.acoustic_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
+        self.prosodic_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
 
 def load_audio(video_folder,df_startend,filename):
     #Loading and splitting
     audios = split_questions(video_folder,df_startend,filename)
     #Preprocessing
     audios = [Audio(audio, filename.split('.mp4',2)[0], i) for (i,audio) in enumerate(audios)]
-    print(audios[0].email,audios[0].question)
     audios = [audio.preprocessing() for audio in audios]
     return audios
