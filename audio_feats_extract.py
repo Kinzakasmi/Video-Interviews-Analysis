@@ -246,7 +246,6 @@ class Audio :
 
     def preprocessing(self):
         # Detecting silent parts
-        print("Extracting pause-related features")
         self.silent_ranges = pydub.silence.detect_silence(self.audio, 
                                                         min_silence_len=self.min_silence_len, 
                                                         silence_thresh=self.silence_thresh, 
@@ -271,5 +270,5 @@ def load_audio(video_folder,df_startend,filename):
     audios = split_questions(video_folder,df_startend,filename)
     #Preprocessing
     audios = [Audio(audio, filename.split('.mp4',2)[0], i) for (i,audio) in enumerate(audios)]
-    audios = [audio.preprocessing() for audio in audios]
+    [audio.preprocessing() for audio in audios]
     return audios
