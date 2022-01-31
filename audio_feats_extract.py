@@ -1,4 +1,4 @@
-from audio_utils import pydub2librosa
+from audio_utils import pydub2librosa, split_questions
 import pydub
 import librosa
 import numpy as np
@@ -19,7 +19,7 @@ def pauses_features(silent_ranges,length) :
         return [0,0,0,0], ['']
     else :
         durations      = [round(d/length,6) for d in silence_durations] #normalization
-        nb_long_pauses = round(len(durations)/length,6)
+        nb_long_pauses = round(len(np.array(durations)>5)/length,6)
         mean_pauses    =  np.mean(durations)
         max_pauses     = np.max(durations)
         return [nb_long_pauses, mean_pauses, max_pauses]
@@ -176,9 +176,12 @@ def loudness_features(y,sr,n_fft,hop_length):
     
     return df_features
 
-def get_formants(sound,f0min,f0max):
+def get_formants(audio,f0min,f0max):
     """Extracts formants (frequency peaks in the spectrum which have a high degree of energy).
     This functions uses Praat software. I will look into implementing this myself."""
+    audio.export('test.wav') #No other option that exporting in .wav temporarily
+    tempfile = os.getcwd()+"/test.wav"
+    sound = parselmouth.Sound(tempfile) 
 
     pointProcess = praat.call(sound, "To PointProcess (periodic, cc)", f0min, f0max)
     formants = praat.call(sound, "To Formant (burg)", 0.0025, 5, 5000, 0.025, 50)
@@ -202,28 +205,8 @@ def get_formants(sound,f0min,f0max):
     df_features       = df_features.transpose()
     df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
+    os.remove(tempfile)
     return df_features
-
-def source_acoustics(sound, f0min, f0max):
-    """Measures HNR, Jitter, and Shimmer"""
-    harmonicity         = praat.call(sound, "To Harmonicity (cc)", 0.01, f0min, 0.1, 1.0)
-    hnr                 = praat.call(harmonicity, "Get mean", 0, 0)
-    pointProcess        = praat.call(sound, "To PointProcess (periodic, cc)", f0min, f0max)
-    localJitter         = praat.call(pointProcess, "Get jitter (local)", 0, 0, 0.0001, 0.02, 1.3)
-    localabsoluteJitter = praat.call(pointProcess, "Get jitter (local, absolute)", 0, 0, 0.0001, 0.02, 1.3)
-    rapJitter           = praat.call(pointProcess, "Get jitter (rap)", 0, 0, 0.0001, 0.02, 1.3)
-    ppq5Jitter          = praat.call(pointProcess, "Get jitter (ppq5)", 0, 0, 0.0001, 0.02, 1.3)
-    ddpJitter           = praat.call(pointProcess, "Get jitter (ddp)", 0, 0, 0.0001, 0.02, 1.3)
-    localShimmer        = praat.call([sound, pointProcess], "Get shimmer (local)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-    localdbShimmer      = praat.call([sound, pointProcess], "Get shimmer (local_dB)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-    apq3Shimmer         = praat.call([sound, pointProcess], "Get shimmer (apq3)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-    aqpq5Shimmer        = praat.call([sound, pointProcess], "Get shimmer (apq5)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-    apq11Shimmer        = praat.call([sound, pointProcess], "Get shimmer (apq11)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-    ddaShimmer          = praat.call([sound, pointProcess], "Get shimmer (dda)", 0, 0, 0.0001, 0.02, 1.3, 1.6)
-
-    return (hnr, localJitter, localabsoluteJitter, rapJitter, ppq5Jitter, ddpJitter, localShimmer, localdbShimmer, 
-            apq3Shimmer, aqpq5Shimmer, apq11Shimmer, ddaShimmer)
-    
 
 def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     """Extracts prosodic features. They capture the intonation of speech, the rhythm or the tone of speech. 
@@ -238,19 +221,16 @@ def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     loudness_feats = loudness_features(y,sr,n_fft,hop_length)
     
     #formants 
-    audio.export('test.wav') #No other option that exporting in .wav temporarily
-    tempfile = os.getcwd()+"/test.wav"
-    sound = parselmouth.Sound(tempfile) 
-    formants_feats = get_formants(sound,f0min,f0max)
-    acoustic_feats = source_acoustics(sound, f0min, f0max)
-    os.remove(tempfile)
-
-    return pd.concat([f0_feats, tempo_feats, loudness_feats, formants_feats], axis=1, join="inner"),acoustic_feats
+    formants_feats = get_formants(audio,f0min,f0max)
+    return pd.concat([f0_feats, tempo_feats, loudness_feats, formants_feats], axis=1, join="inner")
 
 class Audio :
-    def __init__(self,audio,min_silence_len=2000,silence_thresh=-40,keep_silence=1000,n_fft=2048,hop_length=512):
-        self.audio = audio
-        self.length = round(len(self.audio)/1000)
+    def __init__(self,audio,email,question,min_silence_len=2000,silence_thresh=-40,keep_silence=1000,
+                n_fft=2048,hop_length=512):
+        self.audio    = audio
+        self.email    = email
+        self.question = question
+        self.length   = round(len(self.audio)/1000)
        
         self.silent_ranges     = []
         self.pauses_features   = []
@@ -285,3 +265,12 @@ class Audio :
 
         # Calculating prosodic_features
         self.prosodic_features, self.acoustic_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
+
+def load_audio(video_folder,df_startend,filename):
+    #Loading and splitting
+    audios = split_questions(video_folder,df_startend,filename)
+    #Preprocessing
+    audios = [Audio(audio, filename.split('.mp4',2)[0], i) for (i,audio) in enumerate(audios)]
+    print(audios[0].email,audios[0].question)
+    audios = [audio.preprocessing() for audio in audios]
+    return audios
