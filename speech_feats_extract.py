@@ -6,6 +6,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from string import punctuation
 from speech_utils import *
 import audio_feats_extract
+import pandas as pd
 
 class FrenchStemTokenizer(object):
 
@@ -62,6 +63,9 @@ class LexicalFeatures:
         self.diff_word_count = 0                    ##Done
         self.complexity = 0
         self.rate_of_speech = 0
+        self.stats_word = {}                        ##Done
+        self.stats_vec = {}                         ##Done
+        self.stats_sentence = {}                    ##Done
 
     def __call__(self):
         return vars(self)
@@ -145,4 +149,26 @@ class LexicalFeatures:
             Set highest number for words in a sentence of the speech
         '''
         self.longest_sentence = max([len(sentence.split()) for sentence in self._sentences])
+
+    
+    def set_stats_word(self):
+        """
+            Set stats (mean, median, std, 95c, max) from words.
+        """
+        self.stats_word = stats([len(word) for word in self._words])
+
+    
+    def set_stats_vec(self):
+        """
+            Set stats (mean, median, std, 95c, max) from vec.
+        """
+        self.stats_vec = stats([len(word) for word in self._vec])
+
+
+    def set_stats_sentence(self):
+        """
+            Set stats (mean, median, std, 95c, max) from sentences.
+        """
+        self.stats_sentence = stats([len(sentence) for sentence in self._sentences])
+
 
