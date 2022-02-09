@@ -7,6 +7,7 @@ from string import punctuation
 from speech_utils import *
 import audio_feats_extract
 import pandas as pd
+import spacy
 
 class FrenchStemTokenizer(object):
 
@@ -39,6 +40,8 @@ class LexicalFeatures:
         self._sentences = []                        ##Done
         self._words = []                            ##Done
         self._vec = []                              ##Done
+        self._lem = []
+        self._words_Dataset = {}
         self.word_count = 0                         ##Done
         self.words_per_sentence = []                ##Done
         self.letters_per_word = []                  ##Done
@@ -97,6 +100,12 @@ class LexicalFeatures:
 
         self._vect = list(countvect.get_feature_names_out())
         self.tot_vocab = len(self._vect)
+
+    def set_lem(self):
+        nlp = spacy.load("fr_dep_news_trf")
+        info = nlp(self._speech)
+        self._lem = [token.lemma_ for token in info]
+        self._sentences = [sentence for sentence in info.sents]
 
     def set_average_word_len(self):
         '''
