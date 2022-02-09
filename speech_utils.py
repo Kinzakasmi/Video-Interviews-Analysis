@@ -1,7 +1,6 @@
 import speech_recognition as sr 
 import numpy as np
 
-
 def speech_recognition(filename):
     """
     Listen from preprocessed audio (ie silences has to be removed for Recognize to work) to
