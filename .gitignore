@@ -10,7 +10,7 @@
 video/
 splits/
 audio/
-.test.py
+.test.ipynb
 .test
 
 *.mp4
