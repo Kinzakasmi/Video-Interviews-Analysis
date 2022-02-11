@@ -40,7 +40,8 @@ class LexicalFeatures:
         self._sentences = []                        ##Done
         self._words = []                            ##Done
         self._vec = []                              ##Done
-        self._lem = []
+        self._lem = []                              ##Done
+        self._ntm = []
         self._words_Dataset = {}
         self.word_count = 0                         ##Done
         self.words_per_sentence = []                ##Done
@@ -106,6 +107,7 @@ class LexicalFeatures:
         info = nlp(self._speech)
         self._lem = [token.lemma_ for token in info]
         self._sentences = [sentence for sentence in info.sents]
+        self._ntm = [token.pos_ for token in info]
 
     def set_average_word_len(self):
         '''
