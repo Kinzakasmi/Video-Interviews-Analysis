@@ -212,10 +212,6 @@ def speech_rate(sound):
     silencedb = -20 #relative to maximum
     mindip = 2
     minpause = 0.3
-    # print a single header line with column names and units
-    # cols = ['soundname', 'nsyll', 'npause', 'dur(s)', 'phonationtime(s)', 'speechrate(nsyll / dur)', 'articulation '
-    #        'rate(nsyll / phonationtime)', 'ASD(speakingtime / nsyll)']
-    # df = pd.DataFrame(columns = cols)
 
     originaldur = sound.get_total_duration()
     duration = praat.call(sound, "Get end time")
