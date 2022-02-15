@@ -30,8 +30,8 @@ def pauses_features(silent_ranges,length) :
         mean_pauses    = np.mean(durations)
         max_pauses     = np.max(durations)
 
-    df_features       = pd.DataFrame([nb_long_pauses, mean_pauses, max_pauses],index=['nb','mean','max'],columns=['pauses'])
-    return df_features
+    df_features       = pd.DataFrame([nb_long_pauses, mean_pauses, max_pauses],index=['nb_pauses','mean_pauses','max_pauses'])
+    return df_features.transpose()
 
 def nonsilent_ranges(silent_ranges,length):
     """Attributes a list of all nonsilent sections of an audio."""
@@ -91,7 +91,7 @@ def split_non_silent(audio, nonsilent_ranges,keep_silence=1000):
     return audio, length
 
 # ---- Spectral features ----
-def spectral_features(audio,n_fft, hop_length):
+def spectral_features(y, sr, n_fft, hop_length):
     """Extracts spectral features from an audio, ie the means of the following :
     - Spectral centroid,
     - Spectral bandwidth,
@@ -99,8 +99,6 @@ def spectral_features(audio,n_fft, hop_length):
     - Zero crossing rate,
     - Mel-Frequency Cepstral Coefficients(MFCCs),
     - Chroma features"""
-    y, sr = pydub2librosa(audio)
-    
     rmse        = librosa.feature.rms(y=y, hop_length=hop_length)
     # Spectral centroid
     spec_cent   = librosa.feature.spectral_centroid(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
@@ -129,7 +127,6 @@ def spectral_features(audio,n_fft, hop_length):
     
     return df_features
 
-# ---- Prosodic features ----
 def f0_features(sound,f0min,f0max):
     """Returns the mean, std, min and max of f0 : time series of fundamental frequencies in Hertz."""
     pitch = praat.call(sound, "To Pitch", 0.0, f0min, f0max) #create a praat pitch object
@@ -320,14 +317,14 @@ def speech_rate(sound):
     df_features = df_features.transpose()
     return df_features
 
-
-import time
-
 def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     """Extracts prosodic features. They capture the intonation of speech, the rhythm or the tone of speech. 
     They reveal the information about the identity, attitude and emotional state of the underlying signal.
     """
     y, sr = pydub2librosa(audio)
+
+    #spectral features
+    spectral_feats = spectral_features(y, sr,n_fft=n_fft,hop_length=hop_length)
     
     #loudness
     loudness_feats = loudness_features(y,sr,n_fft,hop_length)
@@ -346,7 +343,7 @@ def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     #speech info
     speech_feats = speech_rate(sound)
     os.remove(tempfile)
-    return pd.concat([f0_feats, loudness_feats, formants_feats], axis=1, join="inner"), speech_feats
+    return pd.concat([spectral_feats, f0_feats, loudness_feats, formants_feats], axis=1, join="inner"), speech_feats
 
 class Audio :
     def __init__(self,audio,email,question,min_silence_len=2000,silence_thresh=-30,keep_silence=1000,
@@ -357,11 +354,9 @@ class Audio :
         self.length   = round(len(self.audio)/1000)
        
         self.silent_ranges     = []
-        self.pauses_features   = []
         self.nonsilent_ranges  = []
         self.spectral_features = []
         self.prosodic_features = []
-        self.speech_features = []
 
         self.min_silence_len = min_silence_len
         self.silence_thresh  = silence_thresh
@@ -377,19 +372,17 @@ class Audio :
                                                         silence_thresh=self.silence_thresh, 
                                                         seek_step=20)
         # Calculating pause-related features
-        self.pauses_features = pauses_features(self.silent_ranges,self.length)
+        pauses_feats = pauses_features(self.silent_ranges,self.length)
         
         # Getting nonsilent parts
         self.nonsilent_ranges = nonsilent_ranges(self.silent_ranges,self.length)
         
         # Removing silent parts from audio
-        self.audio, self.length = split_non_silent(self.audio,self.nonsilent_ranges,keep_silence=self.keep_silence)
-
-        # Calculating spectral features
-        self.spectral_features = spectral_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
+        self.audio, self.length = split_non_silent(self.audio,self.nonsilent_ranges,keep_silence=self.keep_silence)        
 
         # Calculating prosodic_features
-        self.prosodic_features, self.speech_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
+        self.spectral_features, self.prosodic_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
+        self.prosodic_features = pd.concat([self.prosodic_features,pauses_feats],axis=1)
 
 def load_audio(video_folder,df_startend,filename):
     #Loading and splitting
