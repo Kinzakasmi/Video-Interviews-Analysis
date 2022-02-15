@@ -21,13 +21,17 @@ def pauses_features(silent_ranges,length) :
     silence_durations = [round((e-s)/1000) for (s,e) in silent_ranges]
 
     if len(silence_durations) == 0 :
-        return [0,0,0,0], ['']
+        nb_long_pauses = 0
+        mean_pauses    = 0
+        max_pauses     = 0
     else :
         durations      = [round(d/length,6) for d in silence_durations] #normalization
         nb_long_pauses = round(len(np.array(durations)>5)/length,6)
-        mean_pauses    =  np.mean(durations)
+        mean_pauses    = np.mean(durations)
         max_pauses     = np.max(durations)
-        return [nb_long_pauses, mean_pauses, max_pauses]
+
+    df_features       = pd.DataFrame([nb_long_pauses, mean_pauses, max_pauses],index=['nb','mean','max'],columns=['pauses'])
+    return df_features
 
 def nonsilent_ranges(silent_ranges,length):
     """Attributes a list of all nonsilent sections of an audio."""
@@ -111,15 +115,12 @@ def spectral_features(audio,n_fft, hop_length):
     # Chroma features
     chroma_stft = librosa.feature.chroma_stft(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
 
-    features = [rmse[0,:], spec_cent[0,:], spec_bw[0,:], rolloff[0,:], zcr[0,:]]   
-    for c in chroma_stft :
-        features.append(c)
-
-    for e in mfcc:
-        features.append(e)    
+    features    = [rmse[0,:], spec_cent[0,:], spec_bw[0,:], rolloff[0,:], zcr[0,:]]  
+    [features.append(e) for e in mfcc] 
+    [features.append(c) for c in chroma_stft]
 
     # Formatting the DataFrame
-    feature_names = ['rms','spec_cent','specbw','rolloff','zcr']+['chroma_stft'+str(i) for i in range(12)]+['mfcc'+str(i) for i in range(20)]
+    feature_names = ['rms','spec_cent','spec_bw','rolloff','zcr']+['mfcc'+str(i) for i in range(20)]+['chroma_stft'+str(i) for i in range(12)]
 
     df_features       = pd.DataFrame(features,index=feature_names)
     df_features       = df_features.transpose()
@@ -129,32 +130,17 @@ def spectral_features(audio,n_fft, hop_length):
     return df_features
 
 # ---- Prosodic features ----
-def f0_features(y,sr):
-    """Returns the mean, std, min and max of :
-        - f0 : time series of fundamental frequencies in Hertz.
-        - voiced_prob : time series containing the probability that a frame is voiced.
-    """
-    f0, _, voiced_prob = librosa.pyin(y, sr=sr, frame_length=2048*8,
-                            fmin=librosa.note_to_hz('C2'), fmax=librosa.note_to_hz('C7'))
+def f0_features(sound,f0min,f0max):
+    """Returns the mean, std, min and max of f0 : time series of fundamental frequencies in Hertz."""
+    pitch = praat.call(sound, "To Pitch", 0.0, f0min, f0max) #create a praat pitch object
+    duration = praat.call(pitch, "Get end time")
+    meanF0   = praat.call(pitch, "Get mean", 0, duration, "Hertz") # get mean pitch
+    stdevF0  = praat.call(pitch, "Get standard deviation", 0 , duration, "Hertz") # get standard deviation
+    minF0    = praat.call(pitch, "Get minimum", 0, duration, "Hertz", "Parabolic")
+    maxF0    = praat.call(pitch, "Get maximum", 0, duration, "Hertz", "Parabolic")
     
     # Formatting the DataFrame
-    df_features       = pd.DataFrame([f0,voiced_prob],index=['f0','voiced_pb'])
-    df_features       = df_features.transpose()
-    df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
-    df_features.index = ['mean','std','min','max']
-    
-    return df_features
-
-def tempo_features(y,sr,hop_length):
-    """Returns the estimated tempo (beats per minute)"""
-    oenv  = librosa.onset.onset_strength(y=y, sr=sr, hop_length=hop_length)
-    tempo = librosa.beat.tempo(onset_envelope=oenv, sr=sr, hop_length=hop_length,aggregate=None)
-
-    # Formatting the DataFrame
-    df_features       = pd.DataFrame(tempo,columns=['tempo'])
-    df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
-    df_features.index = ['mean','std','min','max']
-    
+    df_features       = pd.DataFrame([meanF0,stdevF0,minF0,maxF0],index=['mean','std','min','max'],columns=['f0'])    
     return df_features
 
 def loudness_features(y,sr,n_fft,hop_length):
@@ -387,6 +373,7 @@ class Audio :
 
     def preprocessing(self):
         # Detecting silent parts
+        self.silence_thresh = pydub.utils.ratio_to_db(self.audio.max/self.audio.max_possible_amplitude) + self.silence_thresh
         self.silent_ranges = pydub.silence.detect_silence(self.audio, 
                                                         min_silence_len=self.min_silence_len, 
                                                         silence_thresh=self.silence_thresh, 
