@@ -315,9 +315,9 @@ def speech_rate(sound):
                              "articulation rate(nsyll / phonationtime)":articulationrate,
                              "ASD(speakingtime / nsyll)":asd}
 
-    df_features       = pd.DataFrame([voicedcount, npause, originaldur, intensity_duration, speakingrate, articulationrate, asd],
+    df_features = pd.DataFrame([voicedcount, npause, originaldur, intensity_duration, speakingrate, articulationrate, asd],
                             index=['voicedcount', 'npause', 'originaldur', 'intensity_duration', 'speakingrate', 'articulationrate', 'asd'])
-    df_features       = df_features.transpose()
+    df_features = df_features.transpose()
     return df_features
 
 
@@ -328,27 +328,25 @@ def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     They reveal the information about the identity, attitude and emotional state of the underlying signal.
     """
     y, sr = pydub2librosa(audio)
-    # f0
-    f0_feats = f0_features(y,sr)
-    #tempo
-    tempo_feats = tempo_features(y,sr,hop_length)
+    
     #loudness
     loudness_feats = loudness_features(y,sr,n_fft,hop_length)
-
-
-    audio.export('test.wav') #No other option that exporting in .wav temporarily
     
+    # Using Praat
+    audio.export('test.wav') #No other option that exporting in .wav temporarily
     tempfile = os.getcwd()+"/test.wav"
     sound = parselmouth.Sound(tempfile) 
-    
+
+    #f0
+    f0_feats = f0_features(sound,f0min,f0max)
+
     #formants 
     formants_feats = get_formants(sound,f0min,f0max)
 
     #speech info
-    current = time.time()
     speech_feats = speech_rate(sound)
     os.remove(tempfile)
-    return pd.concat([f0_feats, tempo_feats, loudness_feats, formants_feats], axis=1, join="inner"), speech_feats
+    return pd.concat([f0_feats, loudness_feats, formants_feats], axis=1, join="inner"), speech_feats
 
 class Audio :
     def __init__(self,audio,email,question,min_silence_len=2000,silence_thresh=-30,keep_silence=1000,
