@@ -1,3 +1,4 @@
+from matplotlib.pyplot import text
 from nltk.stem.snowball import FrenchStemmer
 from nltk import wordpunct_tokenize          
 from nltk.corpus import stopwords
@@ -6,6 +7,8 @@ from sklearn.feature_extraction.text import CountVectorizer
 from string import punctuation
 from speech_utils import *
 import audio_feats_extract
+import pandas as pd
+import spacy
 
 class FrenchStemTokenizer(object):
 
@@ -38,6 +41,9 @@ class LexicalFeatures:
         self._sentences = []                        ##Done
         self._words = []                            ##Done
         self._vec = []                              ##Done
+        self._lem = []                              ##Done
+        self._ntm = []
+        self._words_Dataset = {}
         self.word_count = 0                         ##Done
         self.words_per_sentence = []                ##Done
         self.letters_per_word = []                  ##Done
@@ -62,6 +68,9 @@ class LexicalFeatures:
         self.diff_word_count = 0                    ##Done
         self.complexity = 0
         self.rate_of_speech = 0
+        self.stats_word = {}                        ##Done
+        self.stats_vec = {}                         ##Done
+        self.stats_sentence = {}                    ##Done
 
     def __call__(self):
         return vars(self)
@@ -76,7 +85,7 @@ class LexicalFeatures:
         '''
 
         countvect = CountVectorizer()
-        text_fts = countvect.fit_transform(self._speech)
+        text_fts = countvect.fit_transform([self._speech])
         count_array = text_fts.toarray()
 
         self._words = list(countvect.get_feature_names_out())
@@ -91,13 +100,22 @@ class LexicalFeatures:
         countvect = CountVectorizer(tokenizer=FrenchStemTokenizer(remove_non_words=True))
         text_fts = countvect.fit_transform([self._speech])
 
-        self._vect = list(countvect.get_feature_names_out())
-        self.tot_vocab = len(self._vect)
+        self._vec = list(countvect.get_feature_names_out())
+        self.tot_vocab = len(self._vec)
+
+
+    def set_lem(self):
+        nlp = spacy.load("fr_dep_news_trf")
+        info = nlp(self._speech)
+        self._lem = [token.lemma_ for token in info]
+        self._sentences = [sentence for sentence in info.sents]
+        self._ntm = [token.pos_ for token in info]
 
     def set_average_word_len(self):
         '''
             Set the average word length
         '''
+        ## / par zéro si letters_per_word pas set => rajouter un garde-fou
         self.average_word_len = sum(self.letters_per_word)/len(self.letters_per_word)
 
     def set_letters_per_word(self):
@@ -123,10 +141,8 @@ class LexicalFeatures:
             if ponc not in ['.', '!', '?']:
                 speech = speech.replace(ponc, '')
 
-        sentences = [sent.split('?') for sent in speech.split('!')]
-        sentences = [sent.split('...') for sent in sentences]
-
-        self._sentences = [sent.split('.') for sent in sentences]
+        sentences = [sent.split('.') for sent__ in speech.split('!') for sent_ in sent__.split('...') for sent in sent_.split('?')]
+        self._sentences = sentences[0]
 
     def set_words_per_sentence(self):
         '''
@@ -145,4 +161,28 @@ class LexicalFeatures:
             Set highest number for words in a sentence of the speech
         '''
         self.longest_sentence = max([len(sentence.split()) for sentence in self._sentences])
+
+
+
+    ## Set statistics for words, vec and sentences 
+    def set_stats_word(self):
+        """
+            Set stats (mean, median, std, 95c, max) from words.
+        """
+        self.stats_word = stats([len(word) for word in self._words])
+
+    
+    def set_stats_vec(self):
+        """
+            Set stats (mean, median, std, 95c, max) from vec.
+        """
+        self.stats_vec = stats([len(word) for word in self._vec])
+
+
+    def set_stats_sentence(self):
+        """
+            Set stats (mean, median, std, 95c, max) from sentences.
+        """
+        self.stats_sentence = stats([len(sentence) for sentence in self._sentences])
+
 
