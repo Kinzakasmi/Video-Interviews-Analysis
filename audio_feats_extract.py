@@ -10,6 +10,11 @@ import os
 import parselmouth 
 from parselmouth import praat
 
+#for test
+import matplotlib.pyplot as plt
+
+import math
+
 # ---- Pause related features ----
 def pauses_features(silent_ranges,length) :    
     """Attributes the min, max and mean of pauses in seconds"""
@@ -176,13 +181,9 @@ def loudness_features(y,sr,n_fft,hop_length):
     
     return df_features
 
-def get_formants(audio,f0min,f0max):
+def get_formants(sound,f0min,f0max):
     """Extracts formants (frequency peaks in the spectrum which have a high degree of energy).
     This functions uses Praat software. I will look into implementing this myself."""
-    audio.export('test.wav') #No other option that exporting in .wav temporarily
-    tempfile = os.getcwd()+"/test.wav"
-    sound = parselmouth.Sound(tempfile) 
-
     pointProcess = praat.call(sound, "To PointProcess (periodic, cc)", f0min, f0max)
     formants = praat.call(sound, "To Formant (burg)", 0.0025, 5, 5000, 0.025, 50)
 
@@ -205,8 +206,140 @@ def get_formants(audio,f0min,f0max):
     df_features       = df_features.transpose()
     df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
-    os.remove(tempfile)
     return df_features
+
+def speech_rate(sound):
+    silencedb = -20 #relative to maximum
+    mindip = 2
+    minpause = 0.3
+    # print a single header line with column names and units
+    # cols = ['soundname', 'nsyll', 'npause', 'dur(s)', 'phonationtime(s)', 'speechrate(nsyll / dur)', 'articulation '
+    #        'rate(nsyll / phonationtime)', 'ASD(speakingtime / nsyll)']
+    # df = pd.DataFrame(columns = cols)
+
+    originaldur = sound.get_total_duration()
+    duration = praat.call(sound, "Get end time")
+    intensity = sound.to_intensity(50)
+    start = praat.call(intensity, "Get time from frame number", 1)
+    nframes = praat.call(intensity, "Get number of frames")
+    end = praat.call(intensity, "Get time from frame number", nframes)
+    min_intensity = praat.call(intensity, "Get minimum", 0, duration, "Parabolic")
+    max_intensity = praat.call(intensity, "Get maximum", 0, duration, "Parabolic")
+
+    # get .99 quantile to get maximum (without influence of non-speech sound bursts)
+    max_99_intensity = praat.call(intensity, "Get quantile", 0, 0, 0.99)
+
+    # estimate Intensity threshold
+    threshold = max_99_intensity + silencedb
+    threshold2 = max_intensity - max_99_intensity
+    threshold3 = silencedb - threshold2
+
+    if threshold < min_intensity:
+        threshold = min_intensity
+
+    # get pauses (silences) and speakingtime
+    textgrid = praat.call(intensity, "To TextGrid (silences)", threshold3, minpause, 0.1, "silent", "sounding")
+    silencetier = praat.call(textgrid, "Extract tier", 1)
+    silencetable = praat.call(silencetier, "Down to TableOfReal", "sounding")
+    
+    npauses = praat.call(silencetable, "Get number of rows")
+    speakingtot = 0
+    for ipause in range(npauses):
+        pause = ipause + 1
+        beginsound = praat.call(silencetable, "Get value", pause, 1)
+        endsound = praat.call(silencetable, "Get value", pause, 2)
+        speakingdur = endsound - beginsound
+        speakingtot += speakingdur
+
+    #speakingdur ca a l'air correct j'ai vérifié sur ableton
+
+    intensity_matrix = praat.call(intensity, "Down to Matrix")
+    # sndintid = sound_from_intensity_matrix
+    sound_from_intensity_matrix = praat.call(intensity_matrix, "To Sound (slice)", 1)
+    # use total duration, not end time, to find out duration of intdur (intensity_duration)
+    # in order to allow nonzero starting times.
+    intensity_duration = praat.call(sound_from_intensity_matrix, "Get total duration")
+    intensity_max = praat.call(sound_from_intensity_matrix, "Get maximum", 0, 0, "Parabolic")
+    point_process = praat.call(sound_from_intensity_matrix, "To PointProcess (extrema)", "Left", "yes", "no", "Sinc70")
+    # estimate peak positions (all peaks)
+    numpeaks = praat.call(point_process, "Get number of points")
+    t = [praat.call(point_process, "Get time from index", i + 1) for i in range(numpeaks)]
+
+    # fill array with intensity values
+    timepeaks = []
+    peakcount = 0
+    intensities = []
+    for i in range(numpeaks):
+        value = praat.call(sound_from_intensity_matrix, "Get value at time", t[i], "Cubic")
+        if value > threshold:
+            peakcount += 1
+            intensities.append(value)
+            timepeaks.append(t[i])
+
+    # fill array with valid peaks: only intensity values if preceding
+    # dip in intensity is greater than mindip
+    validpeakcount = 0
+    currenttime = timepeaks[0]
+    currentint = intensities[0]
+    validtime = []
+    for p in range(peakcount - 1):
+        following = p + 1
+        followingtime = timepeaks[p + 1]
+        dip = praat.call(intensity, "Get minimum", currenttime, timepeaks[p + 1], "None")
+        
+        
+        diffint = abs(currentint - dip)
+        if diffint > mindip:
+            validpeakcount += 1
+            validtime.append(timepeaks[p])
+        else:
+            currenttime = timepeaks[following]
+            currentint = praat.call(intensity, "Get value at time", timepeaks[following], "Cubic")
+    
+    # Look for only voiced parts
+    pitch = sound.to_pitch_ac(0.02, 30, 4, False, 0.03, 0.25, 0.01, 0.35, 0.25, 450)
+    voicedcount = 0
+    voicedpeak = []
+    timecorrection = originaldur / intensity_duration
+    for time in range(validpeakcount):
+        querytime = validtime[time]
+        whichinterval = praat.call(textgrid, "Get interval at time", 1, querytime)
+        whichlabel = praat.call(textgrid, "Get label of interval", 1, whichinterval)
+        value = pitch.get_value_at_time(querytime) 
+        if not math.isnan(value):
+            if whichlabel == "sounding":
+                voicedcount += 1
+                voicedpeak.append(validtime[time])
+
+    # calculate time correction due to shift in time for Sound object versus
+    # intensity object
+
+    # Insert voiced peaks in TextGrid
+    praat.call(textgrid, "Insert point tier", 1, "syllables")
+    for i in range(len(voicedpeak)):
+        position = (voicedpeak[i] * timecorrection)
+        praat.call(textgrid, "Insert point", 1, position, "")
+
+    # return results
+    speakingrate = voicedcount / originaldur
+    articulationrate = voicedcount / speakingtot
+    npause = npauses - 1
+    asd = speakingtot / voicedcount
+    speechrate_dictionary = {'nsyll':voicedcount,
+                             'npause': npause,
+                             'dur(s)':originaldur,
+                             'phonationtime(s)':intensity_duration,
+                             'speechrate(nsyll / dur)': speakingrate,
+                             "articulation rate(nsyll / phonationtime)":articulationrate,
+                             "ASD(speakingtime / nsyll)":asd}
+
+    df_features       = pd.DataFrame([voicedcount, npause, originaldur, intensity_duration, speakingrate, articulationrate, asd],
+                            index=['voicedcount', 'npause', 'originaldur', 'intensity_duration', 'speakingrate', 'articulationrate', 'asd'])
+    df_features       = df_features.transpose()
+    return df_features
+
+
+import time
 
 def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     """Extracts prosodic features. They capture the intonation of speech, the rhythm or the tone of speech. 
@@ -219,13 +352,24 @@ def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     tempo_feats = tempo_features(y,sr,hop_length)
     #loudness
     loudness_feats = loudness_features(y,sr,n_fft,hop_length)
+
+
+    audio.export('test.wav') #No other option that exporting in .wav temporarily
+    
+    tempfile = os.getcwd()+"/test.wav"
+    sound = parselmouth.Sound(tempfile) 
     
     #formants 
-    formants_feats = get_formants(audio,f0min,f0max)
-    return pd.concat([f0_feats, tempo_feats, loudness_feats, formants_feats], axis=1, join="inner")
+    formants_feats = get_formants(sound,f0min,f0max)
+
+    #speech info
+    current = time.time()
+    speech_feats = speech_rate(sound)
+    os.remove(tempfile)
+    return pd.concat([f0_feats, tempo_feats, loudness_feats, formants_feats], axis=1, join="inner"), speech_feats
 
 class Audio :
-    def __init__(self,audio,email,question,min_silence_len=2000,silence_thresh=-40,keep_silence=1000,
+    def __init__(self,audio,email,question,min_silence_len=2000,silence_thresh=-30,keep_silence=1000,
                 n_fft=2048,hop_length=512):
         self.audio    = audio
         self.email    = email
@@ -237,6 +381,7 @@ class Audio :
         self.nonsilent_ranges  = []
         self.spectral_features = []
         self.prosodic_features = []
+        self.speech_features = []
 
         self.min_silence_len = min_silence_len
         self.silence_thresh  = silence_thresh
@@ -263,12 +408,12 @@ class Audio :
         self.spectral_features = spectral_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
 
         # Calculating prosodic_features
-        self.prosodic_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
+        self.prosodic_features, self.speech_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
 
 def load_audio(video_folder,df_startend,filename):
     #Loading and splitting
     audios = split_questions(video_folder,df_startend,filename)
     #Preprocessing
     audios = [Audio(audio, filename.split('.mp4',2)[0], i) for (i,audio) in enumerate(audios)]
-    audios = [audio.preprocessing() for audio in audios]
+    [audio.preprocessing() for audio in audios]
     return audios
