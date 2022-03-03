@@ -33,44 +33,37 @@ class FrenchStemTokenizer(object):
         return [self.st.stem(t) for t in word_list]
 
 
-class LexicalFeatures:
+class Lexic:
 
     def __init__(self, audio):
 
-        self._speech = speech_recognition(audio)    ##Kinda Done
-        self._sentences = []                        ##Done
-        self._words = []                            ##Done
-        self._vec = []                              ##Done
-        self._lem = []                              ##Done
-        self._ntm = []
-        self._words_Dataset = {}
-        self.word_count = 0                         ##Done
-        self.words_per_sentence = []                ##Done
-        self.letters_per_word = []                  ##Done
-        self.dic_words = 0
-        self.func_words = 0
-        self.i = {}
-        self.article = {}
-        self.past = {}
-        self.present = {}
-        self.adverb = {}
-        self.social = {}
-        self.negemo = {}
-        self.sad = {}
-        self.work = {}
-        self.period = {}
-        self.average_word_len = 0                   ##Done
-        self.longest_sentence = 0                   ##Done
-        self.average_sentence_len = 0               ##Done
-        self.type_token_ratio = 0
-        self.tot_vocab = 0                          ##Done
-        self.unique_word_count = 0
-        self.diff_word_count = 0                    ##Done
-        self.complexity = 0
-        self.rate_of_speech = 0
-        self.stats_word = {}                        ##Done
-        self.stats_vec = {}                         ##Done
-        self.stats_sentence = {}                    ##Done
+        ## List of raw information not usable for IA models ##
+        self._speech = speech_recognition(audio)    ##Done      Raw speech from audio
+        self._sentences = []                        ##Done      Sentences detected in speech
+        self._words = []                            ##Done      List of words from speech as a set (appearring only once if reppeated)
+        self._vec = []                              ##Done      List of words with meaning on itself (vector)
+        self._lem = []                              ##Done      List of lemmes
+        self._ntm = []                              ##Done      Grammatical type of words as a list of tuples (lemme, gram)
+        self._words_Dataset = {}                    ##Done      Pandas dataframe regrouping features from a dictionary (open lexicon as default)
+
+        ## List of values usable by IA models and stat ##
+        self.words_per_sentence = []                ##Done      List of sentences lengths in number of words
+        self.letters_per_word = []                  ##Done      List of word length in number of letters
+        self.gram_count = []                        ##Todo      Number of each gram type in self._ntm
+
+        ## Numbers of different variables ##
+        self.word_count = 0                         ##Done      Number of words in all the speech
+        self.nb_vec = 0                             ##Done      Number of vec in the speech
+        self.nb_lem = 0                             ##Done      Number of lem in the speech
+        self.diff_word_count = 0                    ##Done      Number of words in the speech (declinaison considered as a new word)
+        self.word_rate = 0                          ##Done      Number of words per second in the speech
+
+        ## Statistics on variables ##
+        self.stats_word = {}                        ##Done      Python dict of stats on words length
+        self.stats_vec = {}                         ##Done      python dict of stats on vec length
+        self.stats_sentence = {}                    ##Done      Python dict of stats on sentences length
+
+        self.lexical_features = {}                  ##Todo      Dataframe of all lexical features
 
     def __call__(self):
         return vars(self)
@@ -101,18 +94,19 @@ class LexicalFeatures:
         text_fts = countvect.fit_transform([self._speech])
 
         self._vec = list(countvect.get_feature_names_out())
-        self.tot_vocab = len(self._vec)
+        self.nb_vec = len(self._vec)
 
     def set_spacy_feats(self):
         nlp = spacy.load("fr_dep_news_trf")
         info = nlp(self._speech)
-        self._lem = [token.lemma_ for token in info]
+        self._lem = list(set([token.lemma_ for token in info]))
         self._sentences = [sentence for sentence in info.sents]
-        self._ntm = [token.pos_ for token in info]
+        self._ntm = [(token.lemma_, token.pos_) for token in info]
 
+    def set_dictionnary(self, dictionary=getDictionnary()):
+        boolean_list = dictionary.ortho.isin(self._lem)
+        self._words_Dataset = dictionary[boolean_list]
 
-    #Set readable features
-    #Set features related to words
     def set_letters_per_word(self):
         '''
             Set the number of letters per word for each word as a list of numbers
@@ -122,44 +116,31 @@ class LexicalFeatures:
     def set_diff_word_count(self):
         self.diff_word_count = len(set(self._words))
 
-    def set_tot_vocab(self):
-        self.tot_vocab = len(set(self._lem))
+    def set_nb_lem(self):
+        self.nb_lem = len(set(self._lem))
 
-    ### Set variables related to sentences
+    def set_speech_rate(self, time):
+        self.word_rate = (self.word_count / time)
+
     def set_words_per_sentence(self):
         '''
             Set number of words per sentences for each sentence as a list of numbers
         '''
         self.words_per_sentence = [len(sentence.split()) for sentence in self._sentences]
 
-    def set_average_sentence_len(self):
-        '''
-            Set average length of sentences in analysed speech
-        '''
-        self.average_sentence_len = sum(self.words_per_sentence)/len(self.words_per_sentence)
 
-    def set_longest_sentence(self):
-        '''
-            Set highest number for words in a sentence of the speech
-        '''
-        self.longest_sentence = max([len(sentence.split()) for sentence in self._sentences])
-
-
-
-    ## Set statistics for words, vec and sentences
+    ## Set statistics
     def set_stats_word(self):
         """
             Set stats (mean, median, std, 95c, max) from words.
         """
         self.stats_word = stats([len(word) for word in self._words])
 
-
     def set_stats_vec(self):
         """
             Set stats (mean, median, std, 95c, max) from vec.
         """
         self.stats_vec = stats([len(word) for word in self._vec])
-
 
     def set_stats_sentence(self):
         """
@@ -168,3 +149,5 @@ class LexicalFeatures:
         self.stats_sentence = stats([len(sentence) for sentence in self._sentences])
 
 
+    def preprocessing(self, time):
+        pass

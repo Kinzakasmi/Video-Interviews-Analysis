@@ -1,5 +1,8 @@
 import speech_recognition as sr 
 import numpy as np
+import pandas as pd
+
+
 
 def speech_recognition(filename):
     """
@@ -27,3 +30,7 @@ def stats(L_floats):
     }
         
     return dico
+
+def getDictionnary(filename = 'http://www.lexique.org/databases/Lexique383/Lexique383.tsv'):
+    lex = pd.read_csv(filename, sep='\t')
+    return lex[["ortho", "lemme", "cgram", "freqfilms2", "freqlivres", "nblettres", "nbphons", "nbsyll"]]
