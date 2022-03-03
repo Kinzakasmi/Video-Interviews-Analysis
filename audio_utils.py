@@ -4,7 +4,7 @@ import os
 import numpy as np
 
 def split_questions(video_folder,df_startend,filename):
-    df_startend = df_startend[df_startend['mail']==filename.split('.mp4',2)[0]]
+    df_startend = df_startend[df_startend['email']==filename.split('.mp4',2)[0]]
     #Read audio
     audio = pydub.AudioSegment.from_file(video_folder+filename,'mp4')
     #split audio
