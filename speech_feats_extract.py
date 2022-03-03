@@ -49,20 +49,25 @@ class Lexic:
         ## List of values usable by IA models and stat ##
         self.words_per_sentence = []                ##Done      List of sentences lengths in number of words
         self.letters_per_word = []                  ##Done      List of word length in number of letters
+        self.syll = []                              ##Todo      List of syllabs per words
         self.gram_count = []                        ##Todo      Number of each gram type in self._ntm
+        self.film_occ = []                          ##Todo      List of occurrence of the word in a film on a given corpus (see Open Lexicon)
+        self.book_occ = []                          ##Todo      List of occurrence of the word in a book on a given corpus (see Open Lexicon)
 
         ## Numbers of different variables ##
         self.word_count = 0                         ##Done      Number of words in all the speech
+        self.diff_word_count = 0                    ##Done      Number of words in the speech (declinaison considered as a new word)
         self.nb_vec = 0                             ##Done      Number of vec in the speech
         self.nb_lem = 0                             ##Done      Number of lem in the speech
-        self.diff_word_count = 0                    ##Done      Number of words in the speech (declinaison considered as a new word)
         self.word_rate = 0                          ##Done      Number of words per second in the speech
 
         ## Statistics on variables ##
         self.stats_word = {}                        ##Done      Python dict of stats on words length
         self.stats_vec = {}                         ##Done      python dict of stats on vec length
         self.stats_sentence = {}                    ##Done      Python dict of stats on sentences length
-
+        self.stats_syll = {}
+        self.stats_film_occ = {}
+        self.stats_book_occ = {}
         self.lexical_features = {}                  ##Todo      Dataframe of all lexical features
 
     def __call__(self):
@@ -83,7 +88,6 @@ class Lexic:
 
         self._words = list(countvect.get_feature_names_out())
         self.word_count = count_array.sum()
-
 
     def set_vec(self):
         '''
@@ -147,6 +151,24 @@ class Lexic:
             Set stats (mean, median, std, 95c, max) from sentences.
         """
         self.stats_sentence = stats([len(sentence) for sentence in self._sentences])
+
+    def set_stats_syll(self):
+        """
+            Set stats (mean, median, std, 95c, max) from syllables in words.
+        """
+        self.stats_syll = stats([le for le in self.syll])
+
+    def set_stats_film_occ(self):
+        """
+            Set stats (mean, median, std, 95c, max) from occurrence of words in films.
+        """
+        self.stats_film_occ = stats([freq for freq in self.film_occ])
+
+    def set_stats_book_occ(self):
+        """
+            Set stats (mean, median, std, 95c, max) from occurrence of words in books.
+        """
+        self.stats_book_occ = stats([freq for freq in self.book_occ])
 
 
     def preprocessing(self, time):
