@@ -63,7 +63,7 @@ class LexicalFeatures:
         self.longest_sentence = 0                   ##Done
         self.average_sentence_len = 0               ##Done
         self.type_token_ratio = 0
-        self.tot_vocab = 0                          ##MaybeDone
+        self.tot_vocab = 0                          ##Done
         self.unique_word_count = 0
         self.diff_word_count = 0                    ##Done
         self.complexity = 0
@@ -103,21 +103,16 @@ class LexicalFeatures:
         self._vec = list(countvect.get_feature_names_out())
         self.tot_vocab = len(self._vec)
 
-
-    def set_lem(self):
+    def set_spacy_feats(self):
         nlp = spacy.load("fr_dep_news_trf")
         info = nlp(self._speech)
         self._lem = [token.lemma_ for token in info]
         self._sentences = [sentence for sentence in info.sents]
         self._ntm = [token.pos_ for token in info]
 
-    def set_average_word_len(self):
-        '''
-            Set the average word length
-        '''
-        ## / par zéro si letters_per_word pas set => rajouter un garde-fou
-        self.average_word_len = sum(self.letters_per_word)/len(self.letters_per_word)
 
+    #Set readable features
+    #Set features related to words
     def set_letters_per_word(self):
         '''
             Set the number of letters per word for each word as a list of numbers
@@ -125,25 +120,12 @@ class LexicalFeatures:
         self.letters_per_word = [len(word) for word in self._words]
 
     def set_diff_word_count(self):
-        self.diff_word_count = len(self._words)
+        self.diff_word_count = len(set(self._words))
 
-
+    def set_tot_vocab(self):
+        self.tot_vocab = len(set(self._lem))
 
     ### Set variables related to sentences
-    def set_sentences(self):
-        '''
-            Split speech as sentences using . ! ? ... as delimiter between sentences and set it in a private variable
-        '''
-
-        #Removing punctuation from the speech to split sentences
-        speech = self._speech
-        for ponc in punctuation:
-            if ponc not in ['.', '!', '?']:
-                speech = speech.replace(ponc, '')
-
-        sentences = [sent.split('.') for sent__ in speech.split('!') for sent_ in sent__.split('...') for sent in sent_.split('?')]
-        self._sentences = sentences[0]
-
     def set_words_per_sentence(self):
         '''
             Set number of words per sentences for each sentence as a list of numbers
@@ -164,14 +146,14 @@ class LexicalFeatures:
 
 
 
-    ## Set statistics for words, vec and sentences 
+    ## Set statistics for words, vec and sentences
     def set_stats_word(self):
         """
             Set stats (mean, median, std, 95c, max) from words.
         """
         self.stats_word = stats([len(word) for word in self._words])
 
-    
+
     def set_stats_vec(self):
         """
             Set stats (mean, median, std, 95c, max) from vec.
