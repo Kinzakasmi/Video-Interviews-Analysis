@@ -1,4 +1,3 @@
-from audio_utils import pydub2librosa, split_questions
 import pydub
 import librosa
 import numpy as np
@@ -10,10 +9,22 @@ import os
 import parselmouth 
 from parselmouth import praat
 
-#for test
-import matplotlib.pyplot as plt
-
 import math
+
+# ---- Read/Split audio ----
+def split_questions(video_folder,df_startend,filename):
+    df_startend = df_startend[df_startend['email']==filename.split('.mp4',2)[0]]
+    #Read audio
+    audio = pydub.AudioSegment.from_file(video_folder+filename,'mp4')
+    #split audio
+    audios = [audio[s:e] for (s,e) in zip(df_startend['start'],df_startend['end'])]
+    return audios
+
+def pydub2librosa(audio):
+    audio = audio.set_channels(1) # to mono audio
+    y = audio.get_array_of_samples()
+    y = librosa.util.buf_to_float(y,n_bytes=2,dtype=np.float32)
+    return y, audio.frame_rate
 
 # ---- Pause related features ----
 def pauses_features(silent_ranges,length) :    
@@ -92,32 +103,15 @@ def split_non_silent(audio, nonsilent_ranges,keep_silence=1000):
 
 # ---- Spectral features ----
 def spectral_features(y, sr, n_fft, hop_length):
-    """Extracts spectral features from an audio, ie the means of the following :
-    - Spectral centroid,
-    - Spectral bandwidth,
-    - Spectral rolloff,
-    - Zero crossing rate,
-    - Mel-Frequency Cepstral Coefficients(MFCCs),
-    - Chroma features"""
-    rmse        = librosa.feature.rms(y=y, hop_length=hop_length)
-    # Spectral centroid
-    spec_cent   = librosa.feature.spectral_centroid(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
-    # Spectral bandwidth
-    spec_bw     = librosa.feature.spectral_bandwidth(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
-    # Spectral rolloff
-    rolloff     = librosa.feature.spectral_rolloff(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
-    # Zero crossing rate
-    zcr         = librosa.feature.zero_crossing_rate(y)
+    """Extracts Mel-Frequency Cepstral Coefficients(MFCCs)
+    """
     # Mel-Frequency Cepstral Coefficients(MFCCs)
     mfcc        = librosa.feature.mfcc(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
 
-    features    = [rmse[0,:], spec_cent[0,:], spec_bw[0,:], rolloff[0,:], zcr[0,:]]  
-    [features.append(e) for e in mfcc] 
-
     # Formatting the DataFrame
-    feature_names = ['rms','spec_cent','spec_bw','rolloff','zcr']+['mfcc'+str(i) for i in range(20)]
+    feature_names = ['mfcc'+str(i) for i in range(20)]
 
-    df_features       = pd.DataFrame(features,index=feature_names)
+    df_features       = pd.DataFrame(mfcc,index=feature_names)
     df_features       = df_features.transpose()
     df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
@@ -373,12 +367,3 @@ class Audio :
         # Calculating prosodic_features
         self.spectral_features, self.prosodic_features = prosodic_features(self.audio,n_fft=self.n_fft,hop_length=self.hop_length)
         self.prosodic_features = pd.concat([self.prosodic_features,pauses_feats],axis=1)
-
-def load_audio(video_folder,df_startend,filename):
-    print(filename)
-    #Loading and splitting
-    audios = split_questions(video_folder,df_startend,filename)
-    #Preprocessing
-    audios = [Audio(audio, filename.split('.mp4',2)[0], i+1) for (i,audio) in enumerate(audios)]
-    [audio.preprocessing() for audio in audios]
-    return audios
