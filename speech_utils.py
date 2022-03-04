@@ -31,6 +31,6 @@ def stats(L_floats):
         
     return dico
 
-def getDictionnary(filename = 'http://www.lexique.org/databases/Lexique383/Lexique383.tsv'):
+def getDictionary(filename = 'http://www.lexique.org/databases/Lexique383/Lexique383.tsv'):
     lex = pd.read_csv(filename, sep='\t')
     return lex[["ortho", "lemme", "cgram", "freqfilms2", "freqlivres", "nblettres", "nbphons", "nbsyll"]]
