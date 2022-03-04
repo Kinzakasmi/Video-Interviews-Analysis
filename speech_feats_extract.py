@@ -35,10 +35,11 @@ class FrenchStemTokenizer(object):
 
 class Lexic:
 
-    def __init__(self, audio):
+    def __init__(self, audio, time):
 
         ## List of raw information not usable for IA models ##
-        self._speech = speech_recognition(audio)    ##Done      Raw speech from audio
+        #self._speech = speech_recognition(audio)    ##Done      Raw speech from audio
+        self._speech = audio
         self._sentences = []                        ##Done      Sentences detected in speech
         self._words = []                            ##Done      List of words from speech as a set (appearring only once if reppeated)
         self._vec = []                              ##Done      List of words with meaning on itself (vector)
@@ -72,6 +73,9 @@ class Lexic:
         self.stats_phon = {}
         ## Assembling all usable data in a pandas dataframe ##
         self.lexical_features = {}                  ##Todo      Dataframe of all lexical features
+
+        self.set_ALL(time)
+
 
     def __call__(self):
         return vars(self)
@@ -212,7 +216,7 @@ class Lexic:
         """
             Set stats (mean, median, std, 95c, max) from phonems in words.
         """
-        self.stats_book_occ = stats(self.phon)
+        self.stats_phon = stats(self.phon)
 
     def set_ALL(self, time):
         self.set_words()
@@ -239,5 +243,6 @@ class Lexic:
 
 
     def preprocessing(self, time):
-        self.set_ALL(time)
+        df = pd.Dataframe()
+
 
