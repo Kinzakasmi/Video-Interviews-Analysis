@@ -22,6 +22,7 @@ def stats(L_floats):
     """
 
     dico = {
+        'min'    : np.min(L_floats),
         'mean'   : np.mean(L_floats), 
         'median' : np.median(L_floats), 
         'std'    : np.std(L_floats), 

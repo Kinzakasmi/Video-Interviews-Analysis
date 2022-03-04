@@ -1,6 +1,6 @@
 from matplotlib.pyplot import text
 from nltk.stem.snowball import FrenchStemmer
-from nltk import wordpunct_tokenize          
+from nltk import wordpunct_tokenize
 from nltk.corpus import stopwords
 from nltk.corpus import words
 from sklearn.feature_extraction.text import CountVectorizer
@@ -9,6 +9,7 @@ from speech_utils import *
 import audio_feats_extract
 import pandas as pd
 import spacy
+
 
 class FrenchStemTokenizer(object):
 
@@ -24,10 +25,10 @@ class FrenchStemTokenizer(object):
         # remove stopwords
         word_list = [word for word in word_list if word not in self.stopwords]
         # remove non words
-        if(self.remove_non_words):
+        if (self.remove_non_words):
             word_list = [word for word in word_list if word in self.words]
         # remove 1-character words
-        word_list = [word for word in word_list if len(word)>1]
+        word_list = [word for word in word_list if len(word) > 1]
         # remove non alpha
         word_list = [word for word in word_list if word.isalpha()]
         return [self.st.stem(t) for t in word_list]
@@ -36,49 +37,123 @@ class FrenchStemTokenizer(object):
 class Lexic:
 
     def __init__(self, audio, time):
-
         ## List of raw information not usable for IA models ##
-        #self._speech = speech_recognition(audio)    ##Done      Raw speech from audio
+        # self._speech = speech_recognition(audio)    ##Done      Raw speech from audio
         self._speech = audio
-        self._sentences = []                        ##Done      Sentences detected in speech
-        self._words = []                            ##Done      List of words from speech as a set (appearring only once if reppeated)
-        self._vec = []                              ##Done      List of words with meaning on itself (vector)
-        self._lem = []                              ##Done      List of lemmes
-        self._ntm = []                              ##Done      Grammatical type of words as a list of tuples (lemme, gram)
-        self._words_Dataset = {}                    ##Done      Pandas dataframe regrouping features from a dictionary (open lexicon as default)
+        self._sentences = []            ##Done      Sentences detected in speech
+        self._words = []                ##Done      List of words from speech as a set (appearring only once if reppeated)
+        self._vec = []                  ##Done      List of words with meaning on itself (vector)
+        self._lem = []                  ##Done      List of lemmes
+        self._ntm = []                  ##Done      Grammatical type of words as a list of tuples (lemme, gram)
+        self._words_Dataset = {}        ##Done      Pandas dataframe regrouping features from a dictionary (open lexicon as default)
 
         ## List of values usable by IA models and stat ##
-        self.words_per_sentence = []                ##Done      List of sentences lengths in number of words
-        self.letters_per_word = []                  ##Done      List of word length in number of letters
-        self.syll = []                              ##Done      List of syllabs per lemme of words used
-        self.phon =[]                               ##Done      list of phonems per lemme of words used
-        self.gram = {}                              ##Done      Number of each gram type in self._ntm
-        self.film_occ = []                          ##Done      List of occurrence of the word in a film on a given corpus (see Open Lexicon)
-        self.book_occ = []                          ##Done      List of occurrence of the word in a book on a given corpus (see Open Lexicon)
+        self.words_per_sentence = []    ##Done      List of sentences lengths in number of words
+        self.letters_per_word = []      ##Done      List of word length in number of letters
+        self.syll = []                  ##Done      List of syllabs per lemme of words used
+        self.phon = []                  ##Done      list of phonems per lemme of words used
+        self.gram = {}                  ##Done      Number of each gram type in self._ntm
+        self.film_occ = []              ##Done      List of occurrence of the word in a film on a given corpus (see Open Lexicon)
+        self.book_occ = []              ##Done      List of occurrence of the word in a book on a given corpus (see Open Lexicon)
 
         ## Numbers of different variables ##
-        self.word_count = 0                         ##Done      Number of words in all the speech
-        self.diff_word_count = 0                    ##Done      Number of words in the speech (declinaison considered as a new word)
-        self.nb_vec = 0                             ##Done      Number of vec in the speech
-        self.nb_lem = 0                             ##Done      Number of lem in the speech
-        self.word_rate = 0                          ##Done      Number of words per second in the speech
+        self.word_count = 0         ##Done      Number of words in all the speech
+        self.diff_word_count = 0    ##Done      Number of words in the speech (declinaison considered as a new word)
+        self.nb_vec = 0             ##Done      Number of vec in the speech
+        self.nb_lem = 0             ##Done      Number of lem in the speech
+        self.word_rate = 0          ##Done      Number of words per second in the speech
 
         ## Statistics on variables ##
-        self.stats_word = {}                        ##Done      Python dict of stats on words length
-        self.stats_vec = {}                         ##Done      python dict of stats on vec length
-        self.stats_sentence = {}                    ##Done      Python dict of stats on sentences length
-        self.stats_syll = {}                        ##Done      Python dict of stats on sentences length
-        self.stats_film_occ = {}                    ##Done      Python dict of stats on sentences length
-        self.stats_book_occ = {}                    ##Done      Python dict of stats on sentences length
+        self.stats_word = {}        ##Done      Python dict of stats on words length
+        self.stats_vec = {}         ##Done      python dict of stats on vec length
+        self.stats_sentence = {}    ##Done      Python dict of stats on sentences length
+        self.stats_syll = {}        ##Done      Python dict of stats on sentences length
+        self.stats_film_occ = {}    ##Done      Python dict of stats on sentences length
+        self.stats_book_occ = {}    ##Done      Python dict of stats on sentences length
         self.stats_phon = {}
         ## Assembling all usable data in a pandas dataframe ##
-        self.lexical_features = {}                  ##Todo      Dataframe of all lexical features
+        self.lexical_features = pd.DataFrame()  ##Done      Dataframe of all lexical features
 
         self.set_ALL(time)
 
-
     def __call__(self):
-        return vars(self)
+        return {
+            'wrd_cnt': self.word_count,
+            'dwrd_cnt': self.diff_word_count,
+            'nb_vec': self.nb_vec,
+            'nb_lem': self.nb_lem,
+            'w_rate': self.word_rate,
+
+            'ADJ': self.gram['ADJ'],
+            'ADP': self.gram['ADP'],
+            'ADV': self.gram['ADV'],
+            'AUX': self.gram['AUX'],
+            'CONJ': self.gram['CONJ'],
+            'CCONJ': self.gram['CCONJ'],
+            'DET': self.gram['DET'],
+            'INTJ': self.gram['INTJ'],
+            'NOUN': self.gram['NOUN'],
+            'NUM': self.gram['NUM'],
+            'PART': self.gram['PART'],
+            'PRON': self.gram['PRON'],
+            'PROPN': self.gram['PROPN'],
+            'PUNCT': self.gram['PUNCT'],
+            'SCONJ': self.gram['SCONJ'],
+            'SYM': self.gram['SYM'],
+            'VERB': self.gram['VERB'],
+            'X': self.gram['X'],
+            'EOL': self.gram['EOL'],
+            'SPACE': self.gram['SPACE'],
+
+            'wrd_min': self.stats_word['min'],
+            'wrd_mean': self.stats_word['mean'],
+            'wrd_med': self.stats_word['median'],
+            'wrd_std': self.stats_word['std'],
+            'wrd_95c': self.stats_word['95c'],
+            'wrd_max': self.stats_word['max'],
+
+            'vec_min': self.stats_vec['min'],
+            'vec_mean': self.stats_vec['mean'],
+            'vec_med': self.stats_vec['median'],
+            'vec_std': self.stats_vec['std'],
+            'vec_95c': self.stats_vec['95c'],
+            'vec_max': self.stats_vec['max'],
+
+            'stc_min': self.stats_sentence['min'],
+            'stc_mean': self.stats_sentence['mean'],
+            'stc_med': self.stats_sentence['median'],
+            'stc_std': self.stats_sentence['std'],
+            'stc_95c': self.stats_sentence['95c'],
+            'stc_max': self.stats_sentence['max'],
+
+            'syll_min': self.stats_syll['min'],
+            'syll_mean': self.stats_syll['mean'],
+            'syll_med': self.stats_syll['median'],
+            'syll_std': self.stats_syll['std'],
+            'syll_95c': self.stats_syll['95c'],
+            'syll_max': self.stats_syll['max'],
+
+            'film_min': self.stats_film_occ['min'],
+            'film_mean': self.stats_film_occ['mean'],
+            'film_med': self.stats_film_occ['median'],
+            'film_std': self.stats_film_occ['std'],
+            'film_95c': self.stats_film_occ['95c'],
+            'film_max': self.stats_film_occ['max'],
+
+            'book_min': self.stats_book_occ['min'],
+            'book_mean': self.stats_book_occ['mean'],
+            'book_med': self.stats_book_occ['median'],
+            'book_std': self.stats_book_occ['std'],
+            'book_95c': self.stats_book_occ['95c'],
+            'book_max': self.stats_book_occ['max'],
+
+            'phon_min': self.stats_phon['min'],
+            'phon_mean': self.stats_phon['mean'],
+            'phon_med': self.stats_phon['median'],
+            'phon_std': self.stats_phon['std'],
+            'phon_95c': self.stats_phon['95c'],
+            'phon_max': self.stats_phon['max']
+        }
 
     ### Set variable related to words
     def set_words(self):
@@ -150,29 +225,28 @@ class Lexic:
         self.phon = [phon for phon in self._words_Dataset['nbphons'].to_list()]
 
     def set_gram(self):
-
-        gr = [c for (_,c) in self._ntm]
+        gr = [c for (_, c) in self._ntm]
         self.gram = {
-    "ADJ"   : gr.count("ADJ"),
-    "ADP"   : gr.count("ADP"),
-    "ADV"   : gr.count("ADV"),
-    "AUX"   : gr.count("AUX"),
-    "CONJ"  : gr.count("CONJ"),
-    "CCONJ" : gr.count("CCONJ"),
-    "DET"   : gr.count("DET"),
-    "INTJ"  : gr.count("INTJ"),
-    "NOUN"  : gr.count("NOUN"),
-    "NUM"   : gr.count("NUM"),
-    "PART"  : gr.count("PART"),
-    "PRON"  : gr.count("PRON"),
-    "PROPN" : gr.count("PROPN"),
-    "PUNCT" : gr.count("PUNCT"),
-    "SCONJ" : gr.count("SCONJ"),
-    "SYM"   : gr.count("SYM"),
-    "VERB"  : gr.count("VERB"),
-    "X"     : gr.count("X"),
-    "EOL"   : gr.count("EOL"),
-    "SPACE" : gr.count("SPAC")
+            "ADJ": gr.count("ADJ"),
+            "ADP": gr.count("ADP"),
+            "ADV": gr.count("ADV"),
+            "AUX": gr.count("AUX"),
+            "CONJ": gr.count("CONJ"),
+            "CCONJ": gr.count("CCONJ"),
+            "DET": gr.count("DET"),
+            "INTJ": gr.count("INTJ"),
+            "NOUN": gr.count("NOUN"),
+            "NUM": gr.count("NUM"),
+            "PART": gr.count("PART"),
+            "PRON": gr.count("PRON"),
+            "PROPN": gr.count("PROPN"),
+            "PUNCT": gr.count("PUNCT"),
+            "SCONJ": gr.count("SCONJ"),
+            "SYM": gr.count("SYM"),
+            "VERB": gr.count("VERB"),
+            "X": gr.count("X"),
+            "EOL": gr.count("EOL"),
+            "SPACE": gr.count("SPACE")
         }
 
     ## Set statistics
@@ -241,8 +315,5 @@ class Lexic:
         self.set_stats_book_occ()
         self.set_stats_phon()
 
-
-    def preprocessing(self, time):
-        df = pd.Dataframe()
-
-
+    def preprocessing(self):
+        return pd.DataFrame(self())
