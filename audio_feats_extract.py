@@ -110,15 +110,12 @@ def spectral_features(y, sr, n_fft, hop_length):
     zcr         = librosa.feature.zero_crossing_rate(y)
     # Mel-Frequency Cepstral Coefficients(MFCCs)
     mfcc        = librosa.feature.mfcc(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
-    # Chroma features
-    chroma_stft = librosa.feature.chroma_stft(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
 
     features    = [rmse[0,:], spec_cent[0,:], spec_bw[0,:], rolloff[0,:], zcr[0,:]]  
     [features.append(e) for e in mfcc] 
-    [features.append(c) for c in chroma_stft]
 
     # Formatting the DataFrame
-    feature_names = ['rms','spec_cent','spec_bw','rolloff','zcr']+['mfcc'+str(i) for i in range(20)]+['chroma_stft'+str(i) for i in range(12)]
+    feature_names = ['rms','spec_cent','spec_bw','rolloff','zcr']+['mfcc'+str(i) for i in range(20)]
 
     df_features       = pd.DataFrame(features,index=feature_names)
     df_features       = df_features.transpose()
@@ -304,13 +301,6 @@ def speech_rate(sound):
     articulationrate = voicedcount / speakingtot
     npause = npauses - 1
     asd = speakingtot / voicedcount
-    speechrate_dictionary = {'nsyll':voicedcount,
-                             'npause': npause,
-                             'dur(s)':originaldur,
-                             'phonationtime(s)':intensity_duration,
-                             'speechrate(nsyll / dur)': speakingrate,
-                             "articulation rate(nsyll / phonationtime)":articulationrate,
-                             "ASD(speakingtime / nsyll)":asd}
 
     df_features = pd.DataFrame([voicedcount, npause, originaldur, intensity_duration, speakingrate, articulationrate, asd],
                             index=['voicedcount', 'npause', 'originaldur', 'intensity_duration', 'speakingrate', 'articulationrate', 'asd'])
@@ -385,9 +375,10 @@ class Audio :
         self.prosodic_features = pd.concat([self.prosodic_features,pauses_feats],axis=1)
 
 def load_audio(video_folder,df_startend,filename):
+    print(filename)
     #Loading and splitting
     audios = split_questions(video_folder,df_startend,filename)
     #Preprocessing
-    audios = [Audio(audio, filename.split('.mp4',2)[0], i) for (i,audio) in enumerate(audios)]
+    audios = [Audio(audio, filename.split('.mp4',2)[0], i+1) for (i,audio) in enumerate(audios)]
     [audio.preprocessing() for audio in audios]
     return audios
