@@ -37,9 +37,9 @@ class FrenchStemTokenizer(object):
 class Lexic:
 
     def __init__(self, audio, time):
+
         ## List of raw information not usable for IA models ##
-        # self._speech = speech_recognition(audio)    ##Done      Raw speech from audio
-        self._speech = audio
+        self._speech = speech_recognition(audio)    ##Done      Raw speech from audio
         self._sentences = []            ##Done      Sentences detected in speech
         self._words = []                ##Done      List of words from speech as a set (appearring only once if reppeated)
         self._vec = []                  ##Done      List of words with meaning on itself (vector)
