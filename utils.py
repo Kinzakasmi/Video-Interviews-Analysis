@@ -1,4 +1,7 @@
 import pandas as pd
+import subprocess
+import sys
+
 
 def get_end_from_start(df_mail):
     end             = df_mail.iloc[1:,:]['start'].copy()
@@ -9,10 +12,16 @@ def get_end_from_start(df_mail):
 def get_start_end_from_file(file):
     #Get start and end times
     df = pd.read_excel(file,1)
-    df = df.rename(columns={'time':'start'}) 
+    df = df.rename(columns={'time':'start'})
     df['start'] = df['start']*1000 #in ms
 
     df = df.groupby('email').apply(get_end_from_start)
     return df
 
+def install(package):
+    subprocess.call([sys.executable, "-m", "pip", "install", package])
 
+
+def setupAll(list):
+    for package in list:
+        install(package)
