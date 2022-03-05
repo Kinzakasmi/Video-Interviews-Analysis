@@ -23,7 +23,6 @@ class Interview():
         prosodic_features = self.Audio.prosodic_features
 
         lexical_features = self.Lexic.lexical_features
-        print(lexical_features)
 
         features = pd.concat([prosodic_features, spectral_features, lexical_features],axis=1)
         features['id']    = self.Audio.email + '_' + str(self.Audio.question)
