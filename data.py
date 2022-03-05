@@ -9,11 +9,10 @@ class Interview():
         self.Audio = Audio(audio,email,question,min_silence_len,silence_thresh,keep_silence,n_fft,hop_length)
         self.Audio.preprocessing()
 
-        self.Lexic = Lexic(self.Audio.audio,self.Audio.prosodic_features['originaldur'])
-                
+        self.Lexic = Lexic(self.Audio.audio,self.Audio.prosodic_features['originaldur'])    
         self.Lexic.preprocessing()
 
-        self.features = self.set_features()
+        self.set_features()
 
     def set_features(self):
         spectral_features          = self.Audio.spectral_features
@@ -24,10 +23,12 @@ class Interview():
         prosodic_features = self.Audio.prosodic_features
 
         lexical_features = self.Lexic.lexical_features
+        print(lexical_features)
 
         features = pd.concat([prosodic_features, spectral_features, lexical_features],axis=1)
         features['id']    = self.Audio.email + '_' + str(self.Audio.question)
         features = features.set_index('id')
+        self.features = features
 
     def get_features(self):
         return self.features
@@ -49,7 +50,6 @@ def get_features(interviews):
     feats = []
     for interview in interviews: 
         features = interview.get_features()
-        features = features.set_index('id')
         feats.append(features)
 
     feats = pd.concat(feats,axis=0)
