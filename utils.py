@@ -1,4 +1,7 @@
 import pandas as pd
+import subprocess
+import sys
+
 
 def get_end_from_start(df_mail):
     end             = df_mail.iloc[1:,:]['start'].copy()
@@ -14,10 +17,6 @@ def get_start_end_from_file(file):
 
     df = df.groupby('email').apply(get_end_from_start)
     return df
-
-
-import subprocess
-import sys
 
 def install(package):
     subprocess.call([sys.executable, "-m", "pip", "install", package])
