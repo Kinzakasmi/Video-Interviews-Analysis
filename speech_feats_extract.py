@@ -21,9 +21,9 @@ def speech_recognition(audio):
     audio_length = len(audio)
     chunk_counter = 1
     # setting where to slice the audio
-    point = 47000
+    point = 40000
     # overlap - remaining audio after slicing
-    rem = 2000
+    rem = 1000
     # iterating through the audio with incrementing of rem
     flag = 0
     start = 0
@@ -51,28 +51,25 @@ def speech_recognition(audio):
         chunk_counter += 1
         # recognising text from the audio
         recognizer = sr.Recognizer()
+
+        done = False
         with sr.AudioFile(chunk_name) as chunk_audio:
             chunk_listened = recognizer.listen(chunk_audio)
-        try:
-            content = recognizer.recognize_google(chunk_listened,language = 'fr-FR')
-            texte += " " + content
-        # if not recognized
-        except sr.UnknownValueError:
-            print('Audio not recognized, retrying.')
-            try : 
+        while not done :
+            try:
                 content = recognizer.recognize_google(chunk_listened,language = 'fr-FR')
                 texte += " " + content
+                done = True
+            # if not recognized
             except sr.UnknownValueError:
-                print('Audio not recognized.')
-        # internet error
-        except sr.RequestError as Error:
-            print('Can\'t connect to the internet')
+                print('Audio not recognized, retrying.')
+            # internet error
+            except sr.RequestError as Error:
+                print('Can\'t connect to the internet')
         os.remove(chunk_name)
         # checking the flag
         if flag == 1:
             break
-    
-    print(texte)
     return texte
 
 def stats(L_floats):
@@ -98,7 +95,7 @@ def getDictionary(filename = 'http://www.lexique.org/databases/Lexique383/Lexiqu
 
 class FrenchStemTokenizer(object):
 
-    def __init__(self, remove_non_words=True):
+    def __init__(self, remove_non_words=False):
         self.st = FrenchStemmer()
         self.stopwords = set(stopwords.words('french'))
         self.words = set(words.words())
@@ -116,7 +113,9 @@ class FrenchStemTokenizer(object):
         word_list = [word for word in word_list if len(word) > 1]
         # remove non alpha
         word_list = [word for word in word_list if word.isalpha()]
-        return [self.st.stem(t) for t in word_list]
+
+        #word_list = [self.st.stem(t) for t in word_list]
+        return word_list
 
 
 class Lexic:
@@ -259,7 +258,7 @@ class Lexic:
             Set vectorized words list as a private argument
         '''
 
-        countvect = CountVectorizer(tokenizer=FrenchStemTokenizer(remove_non_words=True))
+        countvect = CountVectorizer(tokenizer=FrenchStemTokenizer(remove_non_words=False))
         text_fts = countvect.fit_transform([self._speech])
 
         self._vec = list(countvect.get_feature_names_out())

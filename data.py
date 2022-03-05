@@ -33,13 +33,15 @@ class Interview():
         return self.features
 
 
-def read_interview(video_folder,df_startend,filename):
+def read_interview(video_folder,df_startend,filename,min_silence_len=2000,silence_thresh=-30,keep_silence=1000,
+                n_fft=2048,hop_length=512):
     print(filename)
     #Loading and splitting
     audios = split_questions(video_folder,df_startend,filename)
     #Preprocessing
     interviews = [Interview(audio, filename.split('.mp4',2)[0], i+1,
-                            keep_silence=0, min_silence_len=1000, silence_thresh=-40
+                            min_silence_len=min_silence_len,silence_thresh=silence_thresh,keep_silence=keep_silence,
+                            n_fft=n_fft,hop_length=hop_length          
                             ) for (i,audio) in enumerate(audios)]
     return interviews
 
