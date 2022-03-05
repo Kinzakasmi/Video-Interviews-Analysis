@@ -162,7 +162,8 @@ class Lexic:
         self.set_ALL(time)
 
     def __call__(self):
-        return {
+        try:
+            return {
             'wrd_cnt': self.word_count,
             'dwrd_cnt': self.diff_word_count,
             'nb_vec': self.nb_vec,
@@ -238,7 +239,85 @@ class Lexic:
             'phon_std': self.stats_phon['std'],
             'phon_95c': self.stats_phon['95c'],
             'phon_max': self.stats_phon['max']
-        }
+            }
+        except:
+            return {
+                'wrd_cnt': None,
+                'dwrd_cnt': None,
+                'nb_vec': None,
+                'nb_lem': None,
+                'w_rate': None,
+
+                'ADJ': None,
+                'ADP': None,
+                'ADV': None,
+                'AUX': None,
+                'CONJ': None,
+                'CCONJ': None,
+                'DET': None,
+                'INTJ': None,
+                'NOUN': None,
+                'NUM': None,
+                'PART': None,
+                'PRON': None,
+                'PROPN': None,
+                'PUNCT': None,
+                'SCONJ': None,
+                'SYM': None,
+                'VERB': None,
+                'X': None,
+                'EOL': None,
+                'SPACE': None,
+
+                'wrd_min': None,
+                'wrd_mean': None,
+                'wrd_med': None,
+                'wrd_std': None,
+                'wrd_95c': None,
+                'wrd_max': None,
+
+                'vec_min': None,
+                'vec_mean': None,
+                'vec_med': None,
+                'vec_std': None,
+                'vec_95c': None,
+                'vec_max': None,
+
+                'stc_min': None,
+                'stc_mean': None,
+                'stc_med': Nonen,
+                'stc_std': None,
+                'stc_95c': None,
+                'stc_max': None,
+
+                'syll_min': None,
+                'syll_mean': None,
+                'syll_med': None,
+                'syll_std': None,
+                'syll_95c': None,
+                'syll_max': None,
+
+                'film_min': None,
+                'film_mean': None,
+                'film_med': None,
+                'film_std': None,
+                'film_95c': None,
+                'film_max': None,
+
+                'book_min': None,
+                'book_mean': None,
+                'book_med': None,
+                'book_std': None,
+                'book_95c': None,
+                'book_max': None,
+
+                'phon_min': None,
+                'phon_mean': None,
+                'phon_med': None,
+                'phon_std': None,
+                'phon_95c': None,
+                'phon_max': None
+            }
 
     ### Set variable related to words
     def set_words(self):
