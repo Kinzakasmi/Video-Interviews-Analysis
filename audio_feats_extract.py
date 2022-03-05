@@ -12,6 +12,14 @@ from parselmouth import praat
 import math
 
 # ---- Read/Split audio ----
+
+def pydub2librosa(audio):
+    audio = audio.set_channels(1) # to mono audio
+    y = audio.get_array_of_samples()
+    y = librosa.util.buf_to_float(y,n_bytes=2,dtype=np.float32)
+    return y, audio.frame_rate
+
+
 def split_questions(video_folder,df_startend,filename):
     df_startend = df_startend[df_startend['email']==filename.split('.mp4',2)[0]]
     #Read audio
@@ -20,11 +28,6 @@ def split_questions(video_folder,df_startend,filename):
     audios = [audio[s:e] for (s,e) in zip(df_startend['start'],df_startend['end'])]
     return audios
 
-def pydub2librosa(audio):
-    audio = audio.set_channels(1) # to mono audio
-    y = audio.get_array_of_samples()
-    y = librosa.util.buf_to_float(y,n_bytes=2,dtype=np.float32)
-    return y, audio.frame_rate
 
 # ---- Pause related features ----
 def pauses_features(silent_ranges,length) :    
@@ -43,6 +46,7 @@ def pauses_features(silent_ranges,length) :
 
     df_features       = pd.DataFrame([nb_long_pauses, mean_pauses, max_pauses],index=['nb_pauses','mean_pauses','max_pauses'])
     return df_features.transpose()
+
 
 def nonsilent_ranges(silent_ranges,length):
     """Attributes a list of all nonsilent sections of an audio."""
@@ -69,6 +73,7 @@ def nonsilent_ranges(silent_ranges,length):
         nonsilent_ranges.pop(0)
 
     return nonsilent_ranges
+
 
 def split_non_silent(audio, nonsilent_ranges,keep_silence=1000):
     """Attributes list of audio segments from splitting audio_segment on silent sections"""
@@ -101,15 +106,22 @@ def split_non_silent(audio, nonsilent_ranges,keep_silence=1000):
     length = round(len(audio)/1000)
     return audio, length
 
+
 # ---- Spectral features ----
 def spectral_features(y, sr, n_fft, hop_length):
     """Extracts Mel-Frequency Cepstral Coefficients(MFCCs)
     """
+    #rmse      = librosa.feature.rms(y=y, hop_length=hop_length)
+    #spec_cent = librosa.feature.spectral_centroid(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
+    #spec_bw   = librosa.feature.spectral_bandwidth(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
+    #rolloff   = librosa.feature.spectral_rolloff(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
+    #zcr       = librosa.feature.zero_crossing_rate(y)
+
     # Mel-Frequency Cepstral Coefficients(MFCCs)
-    mfcc        = librosa.feature.mfcc(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
+    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_fft=n_fft, hop_length=hop_length)
 
     # Formatting the DataFrame
-    feature_names = ['mfcc'+str(i) for i in range(20)]
+    feature_names     = ['mfcc'+str(i) for i in range(20)]
 
     df_features       = pd.DataFrame(mfcc,index=feature_names)
     df_features       = df_features.transpose()
@@ -117,6 +129,7 @@ def spectral_features(y, sr, n_fft, hop_length):
     df_features.index = ['mean','std','min','max']
     
     return df_features
+
 
 def f0_features(sound,f0min,f0max):
     """Returns the mean, std, min and max of f0 : time series of fundamental frequencies in Hertz."""
@@ -130,6 +143,7 @@ def f0_features(sound,f0min,f0max):
     # Formatting the DataFrame
     df_features       = pd.DataFrame([meanF0,stdevF0,minF0,maxF0],index=['mean','std','min','max'],columns=['f0'])    
     return df_features
+
 
 def loudness_features(y,sr,n_fft,hop_length):
     """The definition of loudness is very complex. This is just a try at finding loudness.
@@ -154,6 +168,7 @@ def loudness_features(y,sr,n_fft,hop_length):
     df_features.index = ['mean','std','min','max']
     
     return df_features
+
 
 def get_formants(sound,f0min,f0max):
     """Extracts formants (frequency peaks in the spectrum which have a high degree of energy).
@@ -181,6 +196,7 @@ def get_formants(sound,f0min,f0max):
     df_features       = df_features.apply(lambda x : [np.nanmean(x),np.nanstd(x),np.nanmin(x),np.nanmax(x)],axis=0)
     df_features.index = ['mean','std','min','max']
     return df_features
+
 
 def speech_rate(sound):
     silencedb = -20 #relative to maximum
@@ -301,6 +317,7 @@ def speech_rate(sound):
     df_features = df_features.transpose()
     return df_features
 
+
 def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     """Extracts prosodic features. They capture the intonation of speech, the rhythm or the tone of speech. 
     They reveal the information about the identity, attitude and emotional state of the underlying signal.
@@ -314,8 +331,8 @@ def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     loudness_feats = loudness_features(y,sr,n_fft,hop_length)
     
     # Using Praat
-    audio.export('test.wav') #No other option that exporting in .wav temporarily
-    tempfile = os.getcwd()+"/test.wav"
+    audio.export('temp.wav',format ="wav") #No other option that exporting in .wav temporarily
+    tempfile = os.getcwd()+"/temp.wav"
     sound = parselmouth.Sound(tempfile) 
 
     #f0
@@ -328,6 +345,7 @@ def prosodic_features(audio,n_fft=2048,hop_length=512,f0min=75,f0max=300):
     speech_feats = speech_rate(sound)
     os.remove(tempfile)
     return pd.concat([spectral_feats, f0_feats, loudness_feats, formants_feats], axis=1, join="inner"), speech_feats
+
 
 class Audio :
     def __init__(self,audio,email,question,min_silence_len=2000,silence_thresh=-30,keep_silence=1000,

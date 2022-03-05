@@ -1,14 +1,99 @@
 from matplotlib.pyplot import text
+import speech_recognition as sr 
 from nltk.stem.snowball import FrenchStemmer
 from nltk import wordpunct_tokenize
 from nltk.corpus import stopwords
 from nltk.corpus import words
 from sklearn.feature_extraction.text import CountVectorizer
 from string import punctuation
-from speech_utils import *
 import audio_feats_extract
 import pandas as pd
 import spacy
+import os
+import numpy as np
+
+def speech_recognition(audio):
+    """
+    Listen from preprocessed audio (ie silences has to be removed for Recognize to work) to
+    compute speech as a string. This function splits the audio into chunks first to be able to translate the text.
+    """
+    texte = ""
+    audio_length = len(audio)
+    chunk_counter = 1
+    # setting where to slice the audio
+    point = 47000
+    # overlap - remaining audio after slicing
+    rem = 2000
+    # iterating through the audio with incrementing of rem
+    flag = 0
+    start = 0
+    end = 0
+    for i in range(0, 2 * audio_length, point):
+        # in first iteration end = rem
+        if i == 0:
+            start = 0
+            end = point
+        else:
+            # other iterations
+            start = end - rem
+            end = start + point
+        # if end is greater than audio_length
+        if end >= audio_length:
+            end = audio_length
+            # to indicate stop
+            flag = 1
+        # getting a chunk from the audio
+        chunk = audio[start:end]
+        # chunk name
+        chunk_name = f'chunk_{chunk_counter}'
+        # storing the chunk to local storage
+        chunk.export(chunk_name, format = 'wav')
+        chunk_counter += 1
+        # recognising text from the audio
+        recognizer = sr.Recognizer()
+        with sr.AudioFile(chunk_name) as chunk_audio:
+            chunk_listened = recognizer.listen(chunk_audio)
+        try:
+            content = recognizer.recognize_google(chunk_listened,language = 'fr-FR')
+            texte += " " + content
+        # if not recognized
+        except sr.UnknownValueError:
+            print('Audio not recognized, retrying.')
+            try : 
+                content = recognizer.recognize_google(chunk_listened,language = 'fr-FR')
+                texte += " " + content
+            except sr.UnknownValueError:
+                print('Audio not recognized.')
+        # internet error
+        except sr.RequestError as Error:
+            print('Can\'t connect to the internet')
+        os.remove(chunk_name)
+        # checking the flag
+        if flag == 1:
+            break
+    
+    print(texte)
+    return texte
+
+def stats(L_floats):
+    """
+    Returns stats from float list.
+    """
+
+    dico = {
+        'min'    : np.min(L_floats),
+        'mean'   : np.mean(L_floats), 
+        'median' : np.median(L_floats), 
+        'std'    : np.std(L_floats), 
+        '95c'    : np.percentile(L_floats, 95), 
+        'max'    : np.max(L_floats)
+    }
+        
+    return dico
+
+def getDictionary(filename = 'http://www.lexique.org/databases/Lexique383/Lexique383.tsv'):
+    lex = pd.read_csv(filename, sep='\t')
+    return lex[["ortho", "lemme", "cgram", "freqfilms2", "freqlivres", "nblettres", "nbphons", "nbsyll"]]
 
 
 class FrenchStemTokenizer(object):

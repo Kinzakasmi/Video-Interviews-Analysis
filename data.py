@@ -1,6 +1,7 @@
 import pandas as pd
-from audio_feats_extract import Audio, pydub2librosa, split_questions
+from audio_feats_extract import Audio, split_questions
 from speech_feats_extract import Lexic
+import os
 
 class Interview():
     def __init__(self,audio,email,question,min_silence_len=2000,silence_thresh=-30,keep_silence=1000,
@@ -9,6 +10,7 @@ class Interview():
         self.Audio.preprocessing()
 
         self.Lexic = Lexic(self.Audio.audio,self.Audio.prosodic_features['originaldur'])
+                
         self.Lexic.preprocessing()
 
         self.features = self.set_features()
@@ -36,7 +38,9 @@ def read_interview(video_folder,df_startend,filename):
     #Loading and splitting
     audios = split_questions(video_folder,df_startend,filename)
     #Preprocessing
-    interviews = [Interview(audio, filename.split('.mp4',2)[0], i+1) for (i,audio) in enumerate(audios)]
+    interviews = [Interview(audio, filename.split('.mp4',2)[0], i+1,
+                            keep_silence=0, min_silence_len=1000, silence_thresh=-40
+                            ) for (i,audio) in enumerate(audios)]
     return interviews
 
 def get_features(interviews):
