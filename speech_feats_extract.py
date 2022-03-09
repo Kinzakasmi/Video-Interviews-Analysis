@@ -117,7 +117,7 @@ class FrenchStemTokenizer(object):
         # remove non alpha
         word_list = [word for word in word_list if word.isalpha()]
 
-        #word_list = [self.st.stem(t) for t in word_list]
+        word_list = [self.st.stem(t) for t in word_list]
         return word_list
 
 
