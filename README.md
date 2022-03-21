@@ -1,6 +1,10 @@
 # Video-interviews-analysis
+## 1. Pour installer toutes les librairies, lancez la commande suivante: 
+python -m setup
 
-Ajouter une nouvelle vidéo:
+## 2. Pour ajouter une/des nouvelle.s vidéo.s à la base d'entrainement et re-entrainer:
+
+Ajouter la video mp4: 
 
 *Télécharger la photo dans ./videos
 
@@ -10,7 +14,11 @@ Ajouter les scores pour chaque question:
     Ajouter une ligne pour chaque question et indiquer la BDD, le numéro de la question et les temps de début de chaque question en secondes
     Ajouter ensuite les scores pour chaque question
 
-Les questions sont les suivantes:    
+Lancer l'entrainement:
+
+*Lancer le notebook train.ipynb
+
+Les questions sont les suivantes:  Attention, 1 est toujours 'négatif' et 4 toujours 'positif', même si la question est tournée autrement.  
 Q1  : Did the participant maintain a good speaking rate (neither too slow nor too fast). 
 Q2  : Did the participant use few filler words (not many filler words)? (Fillers)
 Q3  : Did the participant use gestures to emphasize what is being said? (Gestures)
@@ -32,3 +40,4 @@ Q18 : Did the candidate give the impression that they were confident on their sk
 Q19 : Was the candidate not over confident (quick answers, a little violent, too assertive without concrete examples) ?
 Q20 : How sympathetic/warm the person is in the interview? (Warmness)
 Q21 : Was the participant expressive (neither too blank or exaggerated)? (Face Exp.)
+
