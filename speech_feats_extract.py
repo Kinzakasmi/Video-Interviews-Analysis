@@ -17,6 +17,7 @@ def speech_recognition(audio):
     Listen from preprocessed audio (ie silences has to be removed for Recognize to work) to
     compute speech as a string. This function splits the audio into chunks first to be able to translate the text.
     """
+    #audio = audio.low_pass_filter(4000).high_pass_filter(300)
     texte = ""
     audio_length = len(audio)
     chunk_counter = 1
@@ -45,7 +46,7 @@ def speech_recognition(audio):
         # getting a chunk from the audio
         chunk = audio[start:end]
         # chunk name
-        chunk_name = f'chunk_{chunk_counter}'
+        chunk_name = f'chunk_{chunk_counter}.wav'
         # storing the chunk to local storage
         chunk.export(chunk_name, format = 'wav')
         chunk_counter += 1
@@ -54,7 +55,7 @@ def speech_recognition(audio):
 
         done = False
         with sr.AudioFile(chunk_name) as chunk_audio:
-            chunk_listened = recognizer.listen(chunk_audio)
+            chunk_listened = recognizer.record(chunk_audio)
         while not done :
             try:
                 content = recognizer.recognize_google(chunk_listened,language = 'fr-FR')
@@ -66,11 +67,13 @@ def speech_recognition(audio):
             # internet error
             except sr.RequestError as Error:
                 print('Can\'t connect to the internet')
+
+            if (end - start) < 2000:
+                done = True
         os.remove(chunk_name)
         # checking the flag
         if flag == 1:
-            break
-    return texte
+            return texte
 
 def stats(L_floats):
     """
@@ -114,7 +117,7 @@ class FrenchStemTokenizer(object):
         # remove non alpha
         word_list = [word for word in word_list if word.isalpha()]
 
-        #word_list = [self.st.stem(t) for t in word_list]
+        word_list = [self.st.stem(t) for t in word_list]
         return word_list
 
 
@@ -479,4 +482,4 @@ class Lexic:
         self.set_stats_phon()
 
     def preprocessing(self):
-        return pd.DataFrame(self())
+        self.lexical_features = pd.DataFrame.from_dict(self())
