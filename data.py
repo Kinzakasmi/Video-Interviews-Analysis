@@ -56,7 +56,8 @@ def get_features(interviews):
     return feats
 
 def get_scores(df_name):
-    scores = [pd.read_excel(df_name,i) for i in range(4)]
+    num_correcteurs = 4
+    scores = [pd.read_excel(df_name,i) for i in range(num_correcteurs)]
     scores_all = pd.concat(scores)
 
     scores_all = scores_all.groupby(level=-1).mean()
