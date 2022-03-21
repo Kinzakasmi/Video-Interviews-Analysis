@@ -12,12 +12,14 @@ if __name__ == '__main__':
     setupAll([
         'numpy',
         'pandas',
-        'spacy',
         'openpyxl',
+        'tqdm',
         'ffmpeg',
         'pydub',
         'librosa',
         'praat-parselmouth',
+        'lime',
+        'spacy',
         'intel-openmp',
         'spacy-transformers'
     ])
