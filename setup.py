@@ -21,7 +21,9 @@ if __name__ == '__main__':
         'lime',
         'spacy',
         'intel-openmp',
-        'spacy-transformers'
+        'spacy-transformers',
+        'pickle',
+        'dill'
     ])
 
     subprocess.call([sys.executable, "-m", "spacy", "download", "fr_dep_news_trf"])  
