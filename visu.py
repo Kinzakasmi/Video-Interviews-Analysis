@@ -3,8 +3,8 @@ import seaborn as sb
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 
-
-def heatmap_vizualisation(candidate_score, feature_name, best_value=500, delta_best_value=200, vmin=0, vmax=1000):
+def heatmap_vizualisation(candidate_score, feature_name, best_value=500, delta_best_value=200, vmin=0, 
+                            vmax=1000):
     vmax_approx = vmax
     vmin_approx = vmin
     fac = 1
@@ -66,43 +66,3 @@ def heatmap_vizualisation(candidate_score, feature_name, best_value=500, delta_b
     plt.text(n_val - 20, 1.2, str(vmax), color = 'black', size=16)
 
     fig.show()
-
-def boxplot_viz(feats):
-    import ipywidgets as widgets
-    from ipywidgets import Layout
-
-    email = widgets.Select(
-        options = feats.index.tolist(),
-        description='Interview',
-        disabled=False,
-        layout = Layout(width='50%', height='80px', display='flex')
-    )
-
-    question = widgets.Select(
-        options = feats.question.tolist(),
-        description='Question',
-        disabled=False,
-        layout = Layout(width='50%', height='80px', display='flex')
-    )
-
-
-    variable = widgets.Select(
-        options = feats.columns.tolist(),
-        description='Variable',
-        disabled=False,
-        layout = Layout(width='50%', height='80px', display='flex')
-    )
-
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-
-    def print_boxplot(email,variable):
-        var = round(feats.loc[email,variable],3)
-
-        sns.set_theme(style="whitegrid")
-        ax = sns.boxplot(y=variable, data=feats)
-        ax.axhline(var,c='r')
-
-        plt.text(-0.3, var*1.005, var, horizontalalignment='left', size='small', color='red', weight='normal')
-
-    widgets.interactive(print_boxplot,email=email,variable=variable)
