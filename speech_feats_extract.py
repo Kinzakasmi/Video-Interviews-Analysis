@@ -92,11 +92,20 @@ def stats(L_floats):
     return dico
 
 def getDictionary(filename = 'http://www.lexique.org/databases/Lexique383/Lexique383.tsv'):
+    """
+    Read OpenLexicon dictionary from web (equivalent to read it from Lexique382.csv
+    Return a dataframe from dictionnary with relevant columns
+    """
     lex = pd.read_csv(filename, sep='\t')
     return lex[["ortho", "lemme", "cgram", "freqfilms2", "freqlivres", "nblettres", "nbphons", "nbsyll"]]
 
 
 class FrenchStemTokenizer(object):
+    '''
+    Class to implement french tokenization using FrenchStemmer sklearn function
+    Used in class Lexic bellow
+    Return a list of vec from a text
+    '''
 
     def __init__(self, remove_non_words=False):
         self.st = FrenchStemmer()
@@ -122,8 +131,16 @@ class FrenchStemTokenizer(object):
 
 
 class Lexic:
-
+    '''
+        Class to compute all lexical features from a preprocessed audio (ie. without silences)
+        Initialization of a new Lexic object compute all lexical features in class attributes
+        Calling lexic instance returns a python dictionary with features name as key en features values as values
+    '''
     def __init__(self, audio, time):
+        '''
+            See python documentation for usage (new class instance)
+            Takes preprocessed audio (ie without silences) and question time length to initialize all attributes
+        '''
 
         ## List of raw information not usable for IA models ##
         self._speech = speech_recognition(audio)    ##Done      Raw speech from audio
@@ -164,6 +181,11 @@ class Lexic:
         self.set_ALL(time)
 
     def __call__(self):
+        '''
+        See python documentation for usage (call class instance)
+        Return a dictionary of features used by models to compute grades (ie keep only numericall attributes)
+        Use method preprocess instead of this one to get all features information
+        '''
         try:
             return {
             'wrd_cnt': self.word_count,
@@ -347,6 +369,10 @@ class Lexic:
         self.nb_vec = len(self._vec)
 
     def set_spacy_feats(self):
+        '''
+            Set all attributes that can be computed with spacy library
+        '''
+
         nlp = spacy.load("fr_dep_news_trf")
         info = nlp(self._speech)
         self._lem = list(set([token.lemma_ for token in info]))
@@ -354,6 +380,11 @@ class Lexic:
         self._ntm = [(token.lemma_, token.pos_) for token in info]
 
     def set_dictionary(self, dictionary=getDictionary()):
+        '''
+            Extract words used in speech from a dictionary (default to open lexicon) using lemmes for a quick search
+            Return a dataset which is the reduced dictionarry
+        '''
+
         boolean_list = dictionary.ortho.isin(self._lem)
         self._words_Dataset = dictionary[boolean_list]
 
@@ -361,15 +392,28 @@ class Lexic:
         '''
             Set the number of letters per word for each word as a list of numbers
         '''
+
         self.letters_per_word = [len(word) for word in self._words]
 
     def set_diff_word_count(self):
+        '''
+            See report for more information
+        '''
+
         self.diff_word_count = len(set(self._words))
 
     def set_nb_lem(self):
+        '''
+            See report for more information
+        '''
+
         self.nb_lem = len(set(self._lem))
 
     def set_speech_rate(self, time):
+        '''
+            See report for more information
+        '''
+
         self.word_rate = (self.word_count / time)
 
     def set_words_per_sentence(self):
@@ -379,18 +423,38 @@ class Lexic:
         self.words_per_sentence = [len(sentence.split()) for sentence in self._sentences]
 
     def set_syll(self):
+        '''
+            See report for more information
+        '''
+
         self.syll = [syll for syll in self._words_Dataset['nbsyll'].to_list()]
 
     def set_film_occ(self):
+        '''
+            See report for more information
+        '''
+
         self.film_occ = [freq for freq in self._words_Dataset['freqfilms2'].to_list()]
 
     def set_book_occ(self):
+        '''
+            See report for more information
+        '''
+
         self.book_occ = [freq for freq in self._words_Dataset['freqlivres'].to_list()]
 
     def set_phon(self):
+        '''
+            See report for more information
+        '''
+
         self.phon = [phon for phon in self._words_Dataset['nbphons'].to_list()]
 
     def set_gram(self):
+        '''
+            See report for more information
+        '''
+
         gr = [c for (_, c) in self._ntm]
         self.gram = {
             "ADJ": gr.count("ADJ"),
@@ -459,6 +523,11 @@ class Lexic:
         self.stats_phon = stats(self.phon)
 
     def set_ALL(self, time):
+        '''
+            Call all methods to compute all features extraction
+            Called in init to compute all when creating a new Lexic instance
+        '''
+
         self.set_words()
         self.set_vec()
         self.set_spacy_feats()
@@ -482,4 +551,7 @@ class Lexic:
         self.set_stats_phon()
 
     def preprocessing(self):
+        '''
+            Preprocess instance call dictionnary to return a pandas dataframe
+        '''
         self.lexical_features = pd.DataFrame.from_dict(self())
