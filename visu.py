@@ -81,3 +81,44 @@ def heatmap_vizualisation(data, candidate_score, feature_name, best_value, delta
     ax.plot(x,y, linewidth = 5, color = 'black');
 
     fig.show()
+
+
+def boxplot_viz(feats):
+    import ipywidgets as widgets
+    from ipywidgets import Layout
+
+    email = widgets.Select(
+        options = feats.index.tolist(),
+        description='Interview',
+        disabled=False,
+        layout = Layout(width='50%', height='80px', display='flex')
+    )
+
+    question = widgets.Select(
+        options = feats.question.tolist(),
+        description='Question',
+        disabled=False,
+        layout = Layout(width='50%', height='80px', display='flex')
+    )
+
+
+    variable = widgets.Select(
+        options = feats.columns.tolist(),
+        description='Variable',
+        disabled=False,
+        layout = Layout(width='50%', height='80px', display='flex')
+    )
+
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+
+    def print_boxplot(email,variable):
+        var = round(feats.loc[email,variable],3)
+
+        sns.set_theme(style="whitegrid")
+        ax = sns.boxplot(y=variable, data=feats)
+        ax.axhline(var,c='r')
+
+        plt.text(-0.3, var*1.005, var, horizontalalignment='left', size='small', color='red', weight='normal')
+
+    widgets.interactive(print_boxplot,email=email,variable=variable)
