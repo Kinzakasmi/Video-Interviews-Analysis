@@ -43,4 +43,5 @@ def stats(L_floats):
 
 def getDictionary(filename = 'http://www.lexique.org/databases/Lexique383/Lexique383.tsv'):
     lex = pd.read_csv(filename, sep='\t')
+    lex = lex[lex['islem'] == 1]
     return lex[["ortho", "lemme", "cgram", "freqfilms2", "freqlivres", "nblettres", "nbphons", "nbsyll"]]
