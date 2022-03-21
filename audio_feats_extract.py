@@ -197,7 +197,11 @@ def get_formants(sound,f0min,f0max):
     df_features.index = ['mean','std','min','max']
     return df_features
 
-
+"""Extracts speaking rate and other prosodic features
+Arguments:
+    sound: parselmouth.Sound. The input audio
+Returns: a list of prosodic features (voicedcount, npause, originaldur, intensity_duration, speakingrate, articulationrate, asd)
+"""
 def speech_rate(sound):
     silencedb = -20 #relative to maximum
     mindip = 2
@@ -237,7 +241,6 @@ def speech_rate(sound):
         speakingdur = endsound - beginsound
         speakingtot += speakingdur
 
-    #speakingdur ca a l'air correct j'ai vérifié sur ableton
 
     intensity_matrix = praat.call(intensity, "Down to Matrix")
     # sndintid = sound_from_intensity_matrix
